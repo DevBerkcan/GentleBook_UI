@@ -12,14 +12,16 @@ interface EmployeeSelectorProps {
   onSelect: (employee: Employee) => void;
   onNext: () => void;
   onBack: () => void;
+  tenantSlug?: string;
 }
 
-export function EmployeeSelector({ 
+export function EmployeeSelector({
   selectedService,
-  selectedEmployee, 
-  onSelect, 
-  onNext, 
-  onBack 
+  selectedEmployee,
+  onSelect,
+  onNext,
+  onBack,
+  tenantSlug,
 }: EmployeeSelectorProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,7 @@ export function EmployeeSelector({
       }
       
       try {
-        const data = await getEmployeesByService(selectedService.id);
+        const data = await getEmployeesByService(selectedService.id, tenantSlug);
         
         if (isMounted) {
           setEmployees(data);

@@ -110,8 +110,10 @@ export interface BookingResponse {
 /**
  * Get employees by service ID - only returns employees that can perform this service
  */
-export async function getEmployeesByService(serviceId: string): Promise<Employee[]> {
-  const res = await fetch(`${API_BASE_URL}/employees/by-service/${serviceId}?activeOnly=true`, {
+export async function getEmployeesByService(serviceId: string, tenantSlug?: string): Promise<Employee[]> {
+  let url = `${API_BASE_URL}/employees/by-service/${serviceId}?activeOnly=true`;
+  if (tenantSlug) url += `&tenantSlug=${tenantSlug}`;
+  const res = await fetch(url, {
     credentials: "include",
   });
   if (!res.ok) {
@@ -128,10 +130,11 @@ export async function getEmployeesByService(serviceId: string): Promise<Employee
  * The /employees endpoint is [AllowAnonymous] for public use.
  * credentials:include so the JWT cookie is forwarded when present.
  */
-export async function getEmployees(): Promise<Employee[]> {
-  const res = await fetch(`${API_BASE_URL}/employees?activeOnly=true`, {
-    credentials: "include",
-  });
+export async function getEmployees(tenantSlug?: string): Promise<Employee[]> {
+  const url = tenantSlug
+    ? `${API_BASE_URL}/employees?activeOnly=true&tenantSlug=${tenantSlug}`
+    : `${API_BASE_URL}/employees?activeOnly=true`;
+  const res = await fetch(url, { credentials: "include" });
   if (!res.ok) throw new Error("Fehler beim Laden der Mitarbeiter");
   return res.json();
 }
@@ -153,9 +156,20 @@ export async function getServicesByCategory(
   return res.json();
 }
 
-export async function getServices(): Promise<Service[]> {
-  const res = await fetch(`${API_BASE_URL}/services`);
+export async function getServices(tenantSlug?: string): Promise<Service[]> {
+  const url = tenantSlug
+    ? `${API_BASE_URL}/services?tenantSlug=${tenantSlug}`
+    : `${API_BASE_URL}/services`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error("Fehler beim Laden der Services");
+  return res.json();
+}
+
+export async function getTenantInfo(tenantSlug: string): Promise<{
+  name: string; primaryColor?: string; tagline?: string; welcomeMessage?: string;
+}> {
+  const res = await fetch(`${API_BASE_URL}/booking/${tenantSlug}/info`);
+  if (!res.ok) return { name: tenantSlug };
   return res.json();
 }
 
@@ -164,15 +178,12 @@ export async function getServices(): Promise<Service[]> {
 export async function getAvailability(
   serviceId: string,
   date: string,
-  employeeId?: string  // Add optional employeeId parameter
+  employeeId?: string,
+  tenantSlug?: string,
 ): Promise<AvailabilityResponse> {
   let url = `${API_BASE_URL}/availability/${serviceId}?date=${date}`;
-  
-  // Add employeeId to query params if provided
-  if (employeeId) {
-    url += `&employeeId=${employeeId}`;
-  }
-  
+  if (employeeId) url += `&employeeId=${employeeId}`;
+  if (tenantSlug) url += `&tenantSlug=${tenantSlug}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Fehler beim Laden der Verfügbarkeit");
   return res.json();
@@ -186,9 +197,13 @@ export async function getAvailability(
  * auto-assign the authenticated employee when no employeeId is specified.
  */
 export async function createBooking(
-  data: CreateBookingRequest
+  data: CreateBookingRequest,
+  tenantSlug?: string,
 ): Promise<BookingResponse> {
-  const res = await fetch(`${API_BASE_URL}/bookings`, {
+  const url = tenantSlug
+    ? `${API_BASE_URL}/bookings?tenantSlug=${tenantSlug}`
+    : `${API_BASE_URL}/bookings`;
+  const res = await fetch(url, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
