@@ -6,23 +6,7 @@ import { Instagram, Facebook, Mail } from "lucide-react";
 import { KlaroCookieSettingsButton } from "./KlaroCookieConsent";
 
 export const Footer = () => {
-  const socialLinks = [
-    {
-      name: "Instagram",
-      href: "https://www.instagram.com/skinbloom._aesthetics/",
-      icon: Instagram,
-    },
-    {
-      name: "Facebook",
-      href: "https://www.facebook.com/profile.php?id=61565493292168",
-      icon: Facebook,
-    },
-    {
-      name: "Email",
-      href: "mailto:info@skinbloom-aesthetics.ch",
-      icon: Mail,
-    },
-  ];
+  const socialLinks: { name: string; href: string; icon: any }[] = [];
 
   return (
     <motion.footer
@@ -70,7 +54,7 @@ export const Footer = () => {
       </div>
 
       <p className="text-xs text-[#8A8A8A]">
-        © {new Date().getFullYear()} Skinbloom Aesthetics. Alle Rechte vorbehalten.
+        © {new Date().getFullYear()} GentleBook. Alle Rechte vorbehalten.
       </p>
     </motion.footer>
   );

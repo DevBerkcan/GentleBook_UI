@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Impressum - Skinbloom Aesthetics",
-  description: "Impressum und Kontaktdaten von Skinbloom Aesthetics",
+  title: "Impressum - GentleBook",
+  description: "Impressum und Kontaktdaten von GentleBook",
 };
 
 export default function ImpressumPage() {
@@ -26,7 +26,7 @@ export default function ImpressumPage() {
             <section>
               <h2 className="text-2xl font-bold text-[#1E1E1E] mb-4">Angaben gemäß § 5 TMG</h2>
               <p className="mb-2 text-[#1E1E1E] font-semibold">
-                Skinbloom Aesthetics
+                GentleBook
               </p>
               <p>Elisabethenstrasse 41</p>
               <p>4051 Basel, Schweiz</p>
@@ -39,14 +39,14 @@ export default function ImpressumPage() {
               </p>
               <p className="mb-2">
                 <strong className="text-[#1E1E1E]">E-Mail:</strong>{" "}
-                <a href="mailto:info@skinbloom-aesthetics.ch" className="text-[#E8C7C3] hover:underline">
-                  info@skinbloom-aesthetics.ch
+                <a href="mailto:info@gentlebook.app" className="text-[#E8C7C3] hover:underline">
+                  info@gentlebook.app
                 </a>
               </p>
               <p className="mb-2">
                 <strong className="text-[#1E1E1E]">Website:</strong>{" "}
-                <a href="https://skinbloom-aesthetics.ch" className="text-[#E8C7C3] hover:underline">
-                  https://skinbloom-aesthetics.ch
+                <a href="https://gentlebook.app" className="text-[#E8C7C3] hover:underline">
+                  https://gentlebook.app
                 </a>
               </p>
             </section>

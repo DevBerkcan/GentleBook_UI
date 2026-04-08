@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
-  title: "Datenschutzerklärung - Skinbloom Aesthetics",
-  description: "Datenschutzerklärung von Skinbloom Aesthetics",
+  title: "Datenschutzerklärung - GentleBook",
+  description: "Datenschutzerklärung von GentleBook",
 };
 
 export default function DatenschutzPage() {
@@ -21,7 +21,7 @@ export default function DatenschutzPage() {
 
         <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 border-2 border-[#E8C7C3]/20">
           <h1 className="text-4xl font-bold text-[#1E1E1E] mb-2">Datenschutzerklärung</h1>
-          <p className="text-[#8A8A8A] mb-8">Skinbloom Aesthetics – Stand: März 2026</p>
+          <p className="text-[#8A8A8A] mb-8">GentleBook – Stand: März 2026</p>
 
           <div className="space-y-10 text-[#8A8A8A]">
 
@@ -181,8 +181,8 @@ export default function DatenschutzPage() {
               </p>
               <p className="mb-2">
                 <strong className="text-[#1E1E1E]">E-Mail:</strong>{" "}
-                <a href="mailto:info@skinbloom-aesthetics.ch" className="text-[#E8C7C3] hover:underline">
-                  info@skinbloom-aesthetics.ch
+                <a href="mailto:info@gentlebook.app" className="text-[#E8C7C3] hover:underline">
+                  info@gentlebook.app
                 </a>
               </p>
               <p className="mb-2">

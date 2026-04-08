@@ -15,29 +15,20 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Skinbloom Aesthetics",
-  description:
-    "Skinbloom Aesthetics in Basel – Hautpflege bei Skinbloom Aesthetics. Jetzt online Termin buchen!",
-  keywords: [
-    "Skinbloom Aesthetics",
-    "Skinbloom Aesthetics",
-    "Skinbloom Aesthetics",
-    "Skinbloom",
-    "Hautpflege",
-    "Elisabethenstrasse 41, 4051 Basel, Schweiz",
-  ],
+  title: "GentleBook – Online Buchungssystem",
+  description: "GentleBook – Das smarte Buchungssystem für Salons, Beauty, Barbershops und mehr.",
+  keywords: ["GentleBook", "Buchungssystem", "Online Termin", "Salon", "Beauty", "Barbershop"],
   openGraph: {
-    title: "Skinbloom Aesthetics – Skinbloom Aesthetics",
-    description:
-      "Skinbloom Aesthetics in Basel – moderne Cuts, Fades & Bartpflege. Jetzt online buchen!",
+    title: "GentleBook – Online Buchungssystem",
+    description: "GentleBook – Das smarte Buchungssystem für Salons, Beauty, Barbershops und mehr.",
     type: "website",
     locale: "de_DE",
-    siteName: "Skinbloom Aesthetics",
+    siteName: "GentleBook",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Skinbloom Aesthetics – Premium Skinbloom Aesthetics Basel",
-    description: "Skinbloom Aesthetics in Basel - Online buchen!",
+    title: "GentleBook – Online Buchungssystem",
+    description: "GentleBook – Das smarte Buchungssystem für Salons, Beauty, Barbershops und mehr.",
   },
   robots: {
     index: true,

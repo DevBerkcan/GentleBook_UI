@@ -2,9 +2,9 @@
 import { Calendar, Instagram, MapPin, MessageCircle } from "lucide-react";
 
 export const siteConfig = {
-  title: "Skinbloom Aesthetics",
-  description: "Medizinische Ästhetik & Anti-Aging in Basel",
-  url: "https://skinbloom-aesthetics.ch",
+  title: "GentleBook",
+  description: "Das Buchungssystem für Salons, Beauty & mehr",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://gentlebook.vercel.app",
   image: "/og-image.jpg",
 };
 
@@ -17,19 +17,19 @@ export const socialLinks = [
   },
   {
     label: "Instagram",
-    href: "https://www.instagram.com/skinbloom._aesthetics/",
+    href: "#",
     icon: Instagram,
     variant: "secondary" as const,
   },
   {
-    label: "Route zu uns (Google Maps)",
-    href: "https://maps.google.com/?q=Elisabethenstrasse+41+4051+Basel",
+    label: "Standort",
+    href: "#",
     icon: MapPin,
     variant: "maps" as const,
   },
   {
-    label: "WhatsApp schreiben",
-    href: "https://wa.me/41791234567",
+    label: "WhatsApp",
+    href: "#",
     icon: MessageCircle,
     variant: "whatsapp" as const,
   },

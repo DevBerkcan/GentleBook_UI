@@ -16,7 +16,7 @@ const klaroConfig = {
   elementID: "klaro",
 
   // Storage-Name
-  storageName: "barber-dario-cookie-consent",
+  storageName: "gentlebook-cookie-consent",
 
   // Cookie-Domain (optional)
   cookieDomain: undefined,

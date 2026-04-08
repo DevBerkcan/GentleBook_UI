@@ -8,19 +8,19 @@ export const CookieBanner = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const cookieConsent = localStorage.getItem("skinbloom_cookie_consent");
+    const cookieConsent = localStorage.getItem("gentlebook_cookie_consent");
     if (!cookieConsent) {
       setTimeout(() => setIsVisible(true), 1000);
     }
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem("skinbloom_cookie_consent", "accepted");
+    localStorage.setItem("gentlebook_cookie_consent", "accepted");
     setIsVisible(false);
   };
 
   const handleDecline = () => {
-    localStorage.setItem("skinbloom_cookie_consent", "declined");
+    localStorage.setItem("gentlebook_cookie_consent", "declined");
     setIsVisible(false);
   };
 

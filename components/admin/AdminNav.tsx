@@ -3,9 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, Calendar, Clock, BarChart3, Ban, LogOut, 
-  Menu, X, Users, User, ChevronDown, Scissors, Package 
+import {
+  LayoutDashboard, Calendar, BarChart3, Ban, LogOut,
+  Menu, X, Users, ChevronDown, Scissors, Settings, CreditCard
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -21,9 +21,9 @@ import { Avatar } from "@nextui-org/avatar";
 export function AdminNav() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { employee, logout, isAuthenticated } = useAuth();
+  const { user, employee, logout, isAuthenticated, isTenantAdmin } = useAuth();
 
-  const navItems = [
+  const baseNavItems = [
     { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/calendar", label: "Kalender", icon: Calendar },
     { href: "/admin/bookings", label: "Buchungen", icon: Calendar },
@@ -34,16 +34,28 @@ export function AdminNav() {
     { href: "/admin/tracking", label: "Tracking", icon: BarChart3 },
   ];
 
+  // TenantAdmin gets extra nav items
+  const adminOnlyItems = isTenantAdmin ? [
+    { href: "/admin/settings", label: "Einstellungen", icon: Settings },
+    { href: "/admin/subscription", label: "Abo", icon: CreditCard },
+  ] : [];
+
+  const navItems = [...baseNavItems, ...adminOnlyItems];
+
   const handleLogout = async () => {
     await logout();
   };
 
+  const displayName = user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '') || employee?.name || '?';
+  const displayRole = user?.role || employee?.role || '';
+  const displaySub = isTenantAdmin ? (user?.tenantName || user?.tenantSlug || user?.email || '') : (user?.username || employee?.username || user?.email || '');
+
   const getInitials = () => {
-    if (!employee?.name) return "?";
-    return employee.name
-      .split(" ")
-      .map(word => word[0])
-      .join("")
+    if (!displayName || displayName === '?') return '?';
+    return displayName
+      .split(' ')
+      .map((w: string) => w[0])
+      .join('')
       .toUpperCase()
       .slice(0, 2);
   };
@@ -60,7 +72,7 @@ export function AdminNav() {
           <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28">
             <Image
               src="/icon.png"
-              alt="Skinbloom"
+              alt="GentleBook"
               fill
               sizes="(max-width: 640px) 80px, (max-width: 768px) 96px, 112px"
               className="rounded-xl object-contain brightness-0 invert"
@@ -106,8 +118,8 @@ export function AdminNav() {
                     size="sm"
                   />
                   <div className="hidden lg:block text-left">
-                    <p className="text-sm font-medium text-white">{employee?.name}</p>
-                    <p className="text-xs text-[#8A8A8A]">{employee?.role}</p>
+                    <p className="text-sm font-medium text-white">{displayName}</p>
+                    <p className="text-xs text-[#8A8A8A]">{displayRole}</p>
                   </div>
                 </div>
                 <ChevronDown size={16} className="text-[#8A8A8A]" />
@@ -117,8 +129,8 @@ export function AdminNav() {
               <DropdownSection showDivider>
                 <DropdownItem key="user-info" className="h-14 gap-2 opacity-100 hover:!bg-transparent cursor-default">
                   <div className="flex flex-col">
-                    <span className="text-white font-medium">Angemeldet als</span>
-                    <span className="text-[#8A8A8A] text-sm">{employee?.username}</span>
+                    <span className="text-white font-medium">{displayName}</span>
+                    <span className="text-[#8A8A8A] text-sm">{displaySub}</span>
                   </div>
                 </DropdownItem>
               </DropdownSection>
@@ -152,9 +164,9 @@ export function AdminNav() {
               <DropdownSection showDivider>
                 <DropdownItem key="user-info-mobile" className="h-14 gap-2 opacity-100 cursor-default">
                   <div className="flex flex-col">
-                    <span className="text-white font-medium">{employee?.name}</span>
-                    <span className="text-[#8A8A8A] text-xs">{employee?.role}</span>
-                    <span className="text-[#8A8A8A] text-xs">{employee?.username}</span>
+                    <span className="text-white font-medium">{displayName}</span>
+                    <span className="text-[#8A8A8A] text-xs">{displayRole}</span>
+                    <span className="text-[#8A8A8A] text-xs">{displaySub}</span>
                   </div>
                 </DropdownItem>
               </DropdownSection>

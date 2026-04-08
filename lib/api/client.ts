@@ -6,60 +6,73 @@ if (!API_BASE_URL) {
   throw new Error('NEXT_PUBLIC_API_URL is not configured');
 }
 
-
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor to add token
+// Request: attach JWT from localStorage.
+// SuperAdmin calls (/superadmin/*) use superadmin_token; all others use access_token.
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== 'undefined') {
+      const isSuperAdminRoute = config.url?.includes('/superadmin');
+      const token = isSuperAdminRoute
+        ? localStorage.getItem('superadmin_token')
+        : localStorage.getItem('access_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle errors
+// Response: handle 401/402 globally.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('employee');
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
-        window.location.href = '/admin/login';
+    if (typeof window === 'undefined') return Promise.reject(error);
+
+    const status = error.response?.status;
+    const path = window.location.pathname;
+
+    if (status === 401) {
+      if (path.startsWith('/superadmin')) {
+        localStorage.removeItem('superadmin_token');
+        localStorage.removeItem('superadmin_user');
+        if (!path.includes('/superadmin/login')) {
+          window.location.href = '/superadmin/login';
+        }
+      } else {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('employee');
+        if (!path.includes('/admin/login')) {
+          window.location.href = '/admin/login';
+        }
       }
     }
+
+    if (status === 402) {
+      // Trial expired — redirect to subscription info page (future)
+      console.warn('Subscription expired or trial ended.');
+    }
+
     return Promise.reject(error);
   }
 );
 
-
-// Helper to extract data from response
 export const extractData = <T>(response: any, isList = true): T => {
   try {
     const { data } = response;
-    
-    if (!data) {
-      return (isList ? [] : null) as T;
-    }
-    
-    // Handle different response structures
-    const responseData = data.data !== undefined ? data.data : 
-                        data.Data !== undefined ? data.Data : 
-                        data;
-    
+    if (!data) return (isList ? [] : null) as T;
+    const responseData = data.data !== undefined ? data.data
+      : data.Data !== undefined ? data.Data
+      : data;
     return responseData as T;
-  } catch (error) {
-    console.error('Error extracting data:', error);
+  } catch {
     return (isList ? [] : null) as T;
   }
 };

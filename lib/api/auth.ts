@@ -14,6 +14,12 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface TenantAdminLoginCredentials {
+  tenantSlug: string;
+  email: string;
+  password: string;
+}
+
 export interface LoginResponse {
   success: boolean;
   token: string;
@@ -21,14 +27,29 @@ export interface LoginResponse {
   message?: string;
 }
 
+export interface TenantAdminLoginResponse {
+  success: boolean;
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    tenantId: string;
+    tenantSlug: string;
+    tenantName?: string;
+  } | null;
+  message?: string;
+}
+
 export const authApi = {
+  // Employee login (existing)
   login: async (credentials: LoginCredentials) => {
     try {
       const response = await api.post('/employee-auth/login', credentials);
-      
-      // Handle the response structure from your backend
       const responseData = response.data;
-      
+
       if (responseData.token && responseData.employee) {
         return {
           success: true,
@@ -37,7 +58,7 @@ export const authApi = {
           message: responseData.message,
         };
       }
-      
+
       return {
         success: false,
         message: responseData.message || 'Ungültige Anmeldedaten',
@@ -50,6 +71,37 @@ export const authApi = {
         message: error.response?.data?.message || 'Fehler bei der Anmeldung',
         token: '',
         employee: null,
+      };
+    }
+  },
+
+  // TenantAdmin login (new)
+  tenantAdminLogin: async (credentials: TenantAdminLoginCredentials): Promise<TenantAdminLoginResponse> => {
+    try {
+      const response = await api.post('/auth/login', credentials);
+      const data = response.data;
+
+      if (data.token && data.user) {
+        return {
+          success: true,
+          token: data.token,
+          user: data.user,
+          message: data.message,
+        };
+      }
+
+      return {
+        success: false,
+        message: data.message || 'Ungültige Anmeldedaten',
+        token: '',
+        user: null,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Fehler bei der Anmeldung',
+        token: '',
+        user: null,
       };
     }
   },
