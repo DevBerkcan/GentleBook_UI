@@ -11,6 +11,9 @@ export interface TenantListItem {
   createdAt: string;
   companyName: string;
   logoUrl?: string;
+  primaryColor?: string;
+  employeeCount?: number;
+  bookingCount?: number;
   subscription?: {
     plan: string;
     status: string;
@@ -78,6 +81,10 @@ export const superAdminApi = {
 
   async deactivateTenant(id: string) {
     await api.patch(`/superadmin/tenants/${id}/deactivate`);
+  },
+
+  async deleteTenant(id: string) {
+    await api.delete(`/superadmin/tenants/${id}`);
   },
 
   // ── Settings / Branding ──────────────────────────────────────

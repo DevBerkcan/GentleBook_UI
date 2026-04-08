@@ -4,14 +4,17 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody } from "@nextui-org/card";
 import { Chip } from "@nextui-org/chip";
-import { Calendar, Clock, TrendingUp, TrendingDown, Users, Sparkles, Euro } from "lucide-react";
+import { Calendar, Clock, TrendingUp, TrendingDown, Users, Euro, Copy, Check, ExternalLink } from "lucide-react";
 import { getDashboard, type DashboardOverview } from "@/lib/api/admin";
 import { formatPrice } from "@/lib/utils/currency";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export default function AdminDashboardPage() {
+  const { user, isTenantAdmin } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     loadDashboard();
@@ -110,6 +113,48 @@ export default function AdminDashboardPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] mb-1">Dashboard</h1>
           <p className="text-sm text-[#8A8A8A]">Übersicht und Statistiken</p>
         </div>
+
+        {/* ── Booking Link Banner ─────────────────────────────────────────── */}
+        {isTenantAdmin && user?.tenantSlug && (
+          <div className="mb-6 sm:mb-8 bg-gradient-to-r from-[#017172] to-[#01a0a2] rounded-2xl p-5 sm:p-6 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-white/80 text-xs sm:text-sm font-medium mb-1">Ihr Buchungslink</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <code className="text-white text-sm sm:text-base font-mono truncate">
+                    /booking/{user.tenantSlug}
+                  </code>
+                </div>
+                {user.tenantName && (
+                  <p className="text-white/60 text-xs mt-1">{user.tenantName}</p>
+                )}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/booking/${user.tenantSlug}`;
+                    navigator.clipboard.writeText(url);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                >
+                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                  {copied ? "Kopiert!" : "Kopieren"}
+                </button>
+                <a
+                  href={`/booking/${user.tenantSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 bg-white text-[#017172] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors"
+                >
+                  <ExternalLink size={15} />
+                  Öffnen
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Stat Cards ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">

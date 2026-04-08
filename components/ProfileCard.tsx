@@ -87,7 +87,7 @@ export const ProfileCard = () => {
         transition={{ delay: 0.3 }}
         className="mb-3 text-3xl font-extrabold tracking-tight text-[#1E1E1E]"
       >
-        SKINBLOOM AESTHETICS<span className="text-[#E8C7C3]">.</span>
+        GentleBook<span className="text-[#E8C7C3]">.</span>
       </motion.h1>
 
       <motion.p
@@ -96,7 +96,7 @@ export const ProfileCard = () => {
         transition={{ delay: 0.4 }}
         className="mb-4 px-4 text-base text-[#8A8A8A] text-balance"
       >
-        Medizinische Ästhetik & Anti-Aging in Basel
+        Das smarte Buchungssystem für Ihren Salon
       </motion.p>
 
       <motion.div

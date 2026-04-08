@@ -26,7 +26,7 @@ export function getUTMParameters(): TrackingData {
 }
 
 // Tracking-Daten in LocalStorage speichern
-const TRACKING_STORAGE_KEY = "barberdario_tracking";
+const TRACKING_STORAGE_KEY = "gentlebook_tracking";
 
 export function saveTrackingData(data: TrackingData) {
   if (typeof window === "undefined") return;
