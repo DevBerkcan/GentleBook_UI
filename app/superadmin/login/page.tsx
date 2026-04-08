@@ -21,7 +21,7 @@ export default function SuperAdminLoginPage() {
       const result = await superAdminLogin(email, password);
       localStorage.setItem('superadmin_token', result.token);
       localStorage.setItem('superadmin_user', JSON.stringify(result.user));
-      router.push('/superadmin/dashboard');
+      router.push('/superadmin/tenants');
     } catch (err: any) {
       setError(err.message ?? 'Login fehlgeschlagen');
     } finally {
