@@ -166,7 +166,7 @@ export default function AdminSubscriptionPage() {
               Möchten Sie upgraden oder haben Sie Fragen zu Ihrem Plan?
             </p>
             <a
-              href="mailto:info@gentlebook.app"
+              href="mailto:support@gentlegroup.de"
               className="inline-block bg-gradient-to-r from-[#017172] to-[#015f60] text-white px-6 py-2 rounded-xl font-medium text-sm hover:opacity-90 transition-opacity"
             >
               Kontakt aufnehmen
