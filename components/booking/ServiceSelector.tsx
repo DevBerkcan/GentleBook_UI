@@ -109,6 +109,22 @@ export function ServiceSelector({ services: fallbackServices, selectedService, o
     );
   }
 
+  if (allServices.length === 0) {
+    return (
+      <div className="text-center py-12 px-4">
+        <Sparkles size={40} className="text-[#E8C7C3] mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-[#1E1E1E] mb-2">Noch keine Leistungen vorhanden</h2>
+        <p className="text-[#8A8A8A] mb-6">Dieser Salon hat noch keine Leistungen eingetragen.</p>
+        <a
+          href="javascript:history.back()"
+          className="inline-block text-sm text-[#017172] underline"
+        >
+          Zurück zum Profil
+        </a>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className={`space-y-6 px-4 sm:px-0 ${selectedService ? "pb-28" : "pb-4"}`}>

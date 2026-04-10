@@ -28,6 +28,7 @@ export default function TenantLinktreePage() {
   const [tenantName, setTenantName] = useState("");
   const [tagline, setTagline] = useState<string | null>(null);
   const [primaryColor, setPrimaryColor] = useState("#E8C7C3");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [links, setLinks] = useState<TenantLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -46,6 +47,7 @@ export default function TenantLinktreePage() {
       setTenantName(info.companyName ?? info.name ?? slug);
       setTagline(info.tagline ?? null);
       if (info.primaryColor) setPrimaryColor(info.primaryColor);
+      if (info.logoUrl) setLogoUrl(info.logoUrl);
       setLinks(tenantLinks);
     }).catch(() => setNotFound(true))
       .finally(() => setLoading(false));
@@ -76,13 +78,21 @@ export default function TenantLinktreePage() {
 
         {/* Profile Card */}
         <div className="flex flex-col items-center gap-3 text-center">
-          {/* Avatar */}
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg"
-            style={{ backgroundColor: primaryColor }}
-          >
-            {tenantName.charAt(0).toUpperCase()}
-          </div>
+          {/* Avatar / Logo */}
+          {logoUrl ? (
+            <img
+              src={`${process.env.NEXT_PUBLIC_API_URL}${logoUrl}`}
+              alt={tenantName}
+              className="w-20 h-20 rounded-full object-cover shadow-lg"
+            />
+          ) : (
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg"
+              style={{ backgroundColor: primaryColor }}
+            >
+              {tenantName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <h1 className="text-2xl font-bold text-[#1E1E1E]">{tenantName}</h1>
           {tagline && (
             <p className="text-sm text-[#8A8A8A] max-w-xs">{tagline}</p>

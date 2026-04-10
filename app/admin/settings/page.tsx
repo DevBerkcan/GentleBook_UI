@@ -5,8 +5,27 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardBody, CardHeader } from '@nextui-org/card';
 import { Input, Textarea } from '@nextui-org/input';
 import { Button } from '@nextui-org/button';
-import { Settings, Save, Building2, Phone, Globe, Palette, Lock, ImageIcon, Upload } from 'lucide-react';
+import { Settings, Save, Building2, Phone, Globe, Palette, Lock, ImageIcon, Upload, Clock } from 'lucide-react';
 import api from '@/lib/api/client';
+
+const DAYS = [
+  { value: 1, label: 'Montag' },
+  { value: 2, label: 'Dienstag' },
+  { value: 3, label: 'Mittwoch' },
+  { value: 4, label: 'Donnerstag' },
+  { value: 5, label: 'Freitag' },
+  { value: 6, label: 'Samstag' },
+  { value: 0, label: 'Sonntag' },
+];
+
+interface BusinessHoursItem {
+  dayOfWeek: number;
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+  breakStartTime: string;
+  breakEndTime: string;
+}
 
 interface TenantSettings {
   companyName: string;
@@ -59,6 +78,14 @@ export default function AdminSettingsPage() {
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState('');
 
+  // Business hours state
+  const [businessHours, setBusinessHours] = useState<BusinessHoursItem[]>(
+    DAYS.map((d) => ({ dayOfWeek: d.value, isOpen: d.value >= 1 && d.value <= 5, openTime: '09:00', closeTime: '18:00', breakStartTime: '', breakEndTime: '' }))
+  );
+  const [bhSaving, setBhSaving] = useState(false);
+  const [bhSaved, setBhSaved] = useState(false);
+  const [bhError, setBhError] = useState('');
+
   // Logo upload state
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState('');
@@ -66,6 +93,7 @@ export default function AdminSettingsPage() {
 
   useEffect(() => {
     loadSettings();
+    loadBusinessHours();
   }, []);
 
   async function loadSettings() {
@@ -79,6 +107,50 @@ export default function AdminSettingsPage() {
       setLoading(false);
     }
   }
+
+  async function loadBusinessHours() {
+    try {
+      const res = await api.get('/tenant/business-hours');
+      const data: any[] = res.data?.data ?? [];
+      if (data.length > 0) {
+        setBusinessHours(
+          DAYS.map((d) => {
+            const existing = data.find((bh: any) => bh.dayOfWeek === d.value);
+            return existing
+              ? { dayOfWeek: d.value, isOpen: existing.isOpen, openTime: existing.openTime ?? '09:00', closeTime: existing.closeTime ?? '18:00', breakStartTime: existing.breakStartTime ?? '', breakEndTime: existing.breakEndTime ?? '' }
+              : { dayOfWeek: d.value, isOpen: d.value >= 1 && d.value <= 5, openTime: '09:00', closeTime: '18:00', breakStartTime: '', breakEndTime: '' };
+          })
+        );
+      }
+    } catch {
+      // use defaults
+    }
+  }
+
+  async function saveBusinessHours() {
+    setBhSaving(true);
+    setBhError('');
+    setBhSaved(false);
+    try {
+      await api.put('/tenant/business-hours', businessHours.map((bh) => ({
+        dayOfWeek: bh.dayOfWeek,
+        isOpen: bh.isOpen,
+        openTime: bh.openTime || '09:00',
+        closeTime: bh.closeTime || '18:00',
+        breakStartTime: bh.breakStartTime || null,
+        breakEndTime: bh.breakEndTime || null,
+      })));
+      setBhSaved(true);
+      setTimeout(() => setBhSaved(false), 3000);
+    } catch (err: any) {
+      setBhError(err.response?.data?.message || 'Fehler beim Speichern');
+    } finally {
+      setBhSaving(false);
+    }
+  }
+
+  const updateBh = (dayOfWeek: number, field: keyof BusinessHoursItem, value: string | boolean) =>
+    setBusinessHours((prev) => prev.map((bh) => bh.dayOfWeek === dayOfWeek ? { ...bh, [field]: value } : bh));
 
   async function saveSettings(e: React.FormEvent) {
     e.preventDefault();
@@ -378,6 +450,69 @@ export default function AdminSettingsPage() {
                   placeholder="Europe/Berlin"
                 />
               </div>
+            </CardBody>
+          </Card>
+
+          {/* Business Hours */}
+          <Card>
+            <CardHeader className="pb-0">
+              <div className="flex items-center gap-2">
+                <Clock size={18} className="text-[#8A8A8A]" />
+                <h2 className="font-semibold text-[#1E1E1E]">Öffnungszeiten</h2>
+              </div>
+            </CardHeader>
+            <CardBody className="gap-3">
+              {DAYS.map((day) => {
+                const bh = businessHours.find((b) => b.dayOfWeek === day.value)!;
+                return (
+                  <div key={day.value} className={`rounded-xl p-3 border-2 transition-colors ${bh.isOpen ? 'border-[#E8C7C3]/40 bg-white' : 'border-gray-100 bg-gray-50'}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <input
+                        type="checkbox"
+                        id={`day-${day.value}`}
+                        checked={bh.isOpen}
+                        onChange={(e) => updateBh(day.value, 'isOpen', e.target.checked)}
+                        className="w-4 h-4 accent-[#E8C7C3] cursor-pointer"
+                      />
+                      <label htmlFor={`day-${day.value}`} className={`font-medium text-sm cursor-pointer w-24 ${bh.isOpen ? 'text-[#1E1E1E]' : 'text-[#8A8A8A]'}`}>
+                        {day.label}
+                      </label>
+                      {bh.isOpen && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="time"
+                              value={bh.openTime}
+                              onChange={(e) => updateBh(day.value, 'openTime', e.target.value)}
+                              className="text-sm border border-gray-200 rounded-lg px-2 py-1 text-[#1E1E1E] bg-white"
+                            />
+                            <span className="text-[#8A8A8A] text-xs">–</span>
+                            <input
+                              type="time"
+                              value={bh.closeTime}
+                              onChange={(e) => updateBh(day.value, 'closeTime', e.target.value)}
+                              className="text-sm border border-gray-200 rounded-lg px-2 py-1 text-[#1E1E1E] bg-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {!bh.isOpen && <span className="text-xs text-[#8A8A8A]">Geschlossen</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              {bhError && <p className="text-xs text-red-600">{bhError}</p>}
+              {bhSaved && <p className="text-xs text-green-600">Öffnungszeiten gespeichert!</p>}
+              <Button
+                type="button"
+                onPress={saveBusinessHours}
+                isLoading={bhSaving}
+                size="sm"
+                className="bg-gradient-to-r from-[#E8C7C3] to-[#D8B0AC] text-white font-semibold"
+                startContent={!bhSaving && <Save size={14} />}
+              >
+                Öffnungszeiten speichern
+              </Button>
             </CardBody>
           </Card>
 
