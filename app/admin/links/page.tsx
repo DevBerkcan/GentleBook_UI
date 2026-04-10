@@ -7,7 +7,8 @@ import {
   Instagram, MessageCircle, MapPin, Facebook, Youtube, Globe,
   Phone, Mail, Edit2, Check, X, Eye, CheckCircle2, AlertCircle,
   ArrowUp, ArrowDown, Palette, Loader2, Sparkles, ChevronDown,
-  Circle, Grid3x3, Minus, Type, Pipette,
+  Circle, Grid3x3, Minus, Type, Pipette, LayoutList, LayoutGrid,
+  Zap, Wind, Square, Smile,
 } from "lucide-react";
 import api from "@/lib/api/client";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -17,17 +18,38 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 type Theme = "gradient" | "dark" | "minimal" | "bold" | "glass";
 type BgPattern = "none" | "dots" | "waves" | "grid" | "circles";
 type ButtonStyle = "rounded" | "pill" | "square";
+type FontFamily = "inter" | "playfair" | "montserrat" | "dm-serif" | "josefin";
+type CardStyle = "filled" | "outlined" | "gradient" | "ghost";
+type LayoutMode = "list" | "grid";
+type AnimSpeed = "none" | "slow" | "normal" | "fast";
 
 interface LinktreeConfig {
   ctaText: string;
   bgPattern: BgPattern;
   buttonStyle: ButtonStyle;
+  // Phase 2:
+  fontFamily?: FontFamily;
+  ctaColor?: string;
+  avatarShape?: "circle" | "rounded" | "square";
+  cardStyle?: CardStyle;
+  layoutMode?: LayoutMode;
+  animationSpeed?: AnimSpeed;
+  showWelcome?: boolean;
+  confetti?: boolean;
 }
 
 const DEFAULT_CONFIG: LinktreeConfig = {
   ctaText: "Termin buchen",
   bgPattern: "none",
   buttonStyle: "rounded",
+  fontFamily: "inter",
+  ctaColor: undefined,
+  avatarShape: "circle",
+  cardStyle: "filled",
+  layoutMode: "list",
+  animationSpeed: "normal",
+  showWelcome: false,
+  confetti: false,
 };
 
 // ── Industry Presets ──────────────────────────────────────────────────────────
@@ -201,7 +223,7 @@ export default function AdminLinksPage() {
 
   // ── Update config field ──────────────────────────────────────────────────────
 
-  function updateConfig(field: keyof LinktreeConfig, value: string) {
+  function updateConfig(field: keyof LinktreeConfig, value: string | boolean | undefined) {
     const next = { ...config, [field]: value };
     setConfig(next);
     saveDesign(theme, primaryColor, next, true);
@@ -500,6 +522,189 @@ export default function AdminLinksPage() {
                       placeholder="Termin buchen"
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8C7C3]/50"
                     />
+                  </div>
+
+                  {/* ── Schriftart ── */}
+                  <div>
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wide mb-2">Schriftart</p>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {([
+                        { v: "inter",      label: "Inter",    font: "sans-serif"           },
+                        { v: "playfair",   label: "Playfair", font: "'Playfair Display', serif" },
+                        { v: "montserrat", label: "Montserrat", font: "'Montserrat', sans-serif" },
+                        { v: "dm-serif",   label: "DM Serif", font: "'DM Serif Display', serif" },
+                        { v: "josefin",    label: "Josefin",  font: "'Josefin Sans', sans-serif" },
+                      ] as const).map(({ v, label, font }) => (
+                        <button key={v} onClick={() => updateConfig("fontFamily", v)}
+                          className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border text-center transition-all ${
+                            (config.fontFamily ?? "inter") === v
+                              ? "bg-[#F5EDEB] border-[#E8C7C3] ring-1 ring-[#E8C7C3]"
+                              : "bg-white border-gray-100 hover:border-gray-300"
+                          }`}
+                          style={{ fontFamily: font }}
+                        >
+                          <span className="text-sm font-semibold text-[#1E1E1E]">Aa</span>
+                          <span className="text-[9px] text-gray-500 leading-tight">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── Button-Farbe ── */}
+                  <div>
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <Pipette size={12} /> Button-Farbe (optional)
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <input type="color"
+                        value={config.ctaColor ?? primaryColor}
+                        onChange={(e) => updateConfig("ctaColor", e.target.value)}
+                        className="w-10 h-10 rounded-xl cursor-pointer border-2 border-white shadow-sm overflow-hidden"
+                        style={{ padding: "2px" }}
+                      />
+                      <div className="flex gap-1.5 flex-wrap">
+                        {["#ffffff","#111111","#C9A96E","#E74C3C","#2ECC71","#4A90D9"].map((c) => (
+                          <button key={c} onClick={() => updateConfig("ctaColor", c)}
+                            className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${config.ctaColor === c ? "border-gray-400 scale-110" : "border-white shadow-sm"}`}
+                            style={{ background: c }} />
+                        ))}
+                      </div>
+                      {config.ctaColor && (
+                        <button onClick={() => updateConfig("ctaColor", undefined)}
+                          className="text-[10px] text-gray-400 hover:text-gray-600 underline">
+                          Zurücksetzen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Avatar-Form ── */}
+                  <div>
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wide mb-2">Avatar-Form</p>
+                    <div className="flex gap-2">
+                      {([
+                        { v: "circle",  label: "Kreis",      radius: "9999px" },
+                        { v: "rounded", label: "Abgerundet",  radius: "16px"   },
+                        { v: "square",  label: "Quadrat",     radius: "4px"    },
+                      ] as const).map(({ v, label, radius }) => (
+                        <button key={v} onClick={() => updateConfig("avatarShape", v)}
+                          className={`flex-1 flex flex-col items-center gap-2 py-3 border rounded-xl text-xs font-medium transition-all ${
+                            (config.avatarShape ?? "circle") === v
+                              ? "bg-[#F5EDEB] border-[#E8C7C3] text-[#D8B0AC]"
+                              : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="w-8 h-8 border-2 border-current opacity-60" style={{ borderRadius: radius }} />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── Karten-Stil ── */}
+                  <div>
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wide mb-2">Link-Karten Stil</p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {([
+                        { v: "filled",   label: "Filled",   bg: "bg-white shadow-sm border" },
+                        { v: "outlined", label: "Outlined", bg: "bg-transparent border-2 border-gray-300" },
+                        { v: "gradient", label: "Gradient", bg: "bg-gradient-to-r from-pink-50 to-white border" },
+                        { v: "ghost",    label: "Ghost",    bg: "bg-transparent" },
+                      ] as const).map(({ v, label, bg }) => (
+                        <button key={v} onClick={() => updateConfig("cardStyle", v)}
+                          className={`flex flex-col items-center gap-1.5 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                            (config.cardStyle ?? "filled") === v
+                              ? "border-[#E8C7C3] ring-1 ring-[#E8C7C3] bg-[#F5EDEB] text-[#D8B0AC]"
+                              : "border-gray-100 text-gray-500 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className={`w-10 h-5 rounded-lg ${bg}`} />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── Layout ── */}
+                  <div>
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wide mb-2">Layout</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => updateConfig("layoutMode", "list")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                          (config.layoutMode ?? "list") === "list"
+                            ? "bg-[#F5EDEB] border-[#E8C7C3] text-[#D8B0AC]"
+                            : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"
+                        }`}
+                      >
+                        <LayoutList size={14} /> Liste
+                      </button>
+                      <button onClick={() => updateConfig("layoutMode", "grid")}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                          (config.layoutMode ?? "list") === "grid"
+                            ? "bg-[#F5EDEB] border-[#E8C7C3] text-[#D8B0AC]"
+                            : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"
+                        }`}
+                      >
+                        <LayoutGrid size={14} /> Grid (Bento)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── Animations-Geschwindigkeit ── */}
+                  <div>
+                    <p className="text-xs font-semibold text-[#1E1E1E] uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <Wind size={12} /> Animationsgeschwindigkeit
+                    </p>
+                    <div className="flex gap-1.5">
+                      {([
+                        { v: "none",   label: "Keine"    },
+                        { v: "slow",   label: "Langsam"  },
+                        { v: "normal", label: "Normal"   },
+                        { v: "fast",   label: "Schnell"  },
+                      ] as const).map(({ v, label }) => (
+                        <button key={v} onClick={() => updateConfig("animationSpeed", v)}
+                          className={`flex-1 py-2 rounded-xl border text-xs font-medium transition-all ${
+                            (config.animationSpeed ?? "normal") === v
+                              ? "bg-[#F5EDEB] border-[#E8C7C3] text-[#D8B0AC]"
+                              : "bg-white border-gray-100 text-gray-500 hover:border-gray-300"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ── Toggles ── */}
+                  <div className="space-y-3">
+                    {/* Willkommensnachricht */}
+                    <div className="flex items-center justify-between py-2.5 px-3 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Smile size={14} className="text-gray-400" />
+                        <div>
+                          <p className="text-xs font-semibold text-[#1E1E1E]">Willkommensnachricht</p>
+                          <p className="text-[10px] text-gray-400">Aus Einstellungen unterhalb der Tagline</p>
+                        </div>
+                      </div>
+                      <button onClick={() => updateConfig("showWelcome", !config.showWelcome)}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${config.showWelcome ? "bg-[#E8C7C3]" : "bg-gray-200"}`}>
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.showWelcome ? "translate-x-5" : "translate-x-0.5"}`} />
+                      </button>
+                    </div>
+                    {/* Konfetti */}
+                    <div className="flex items-center justify-between py-2.5 px-3 bg-gray-50 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <Zap size={14} className="text-gray-400" />
+                        <div>
+                          <p className="text-xs font-semibold text-[#1E1E1E]">Konfetti beim Buchen</p>
+                          <p className="text-[10px] text-gray-400">Kurze Feier-Animation beim CTA-Klick</p>
+                        </div>
+                      </div>
+                      <button onClick={() => updateConfig("confetti", !config.confetti)}
+                        className={`relative w-10 h-5 rounded-full transition-colors ${config.confetti ? "bg-[#E8C7C3]" : "bg-gray-200"}`}>
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.confetti ? "translate-x-5" : "translate-x-0.5"}`} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Vorschau-Link */}
