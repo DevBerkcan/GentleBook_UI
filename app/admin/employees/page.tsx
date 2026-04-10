@@ -9,9 +9,10 @@ import { Chip } from "@nextui-org/chip";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/modal";
 import {
   Plus, Edit, Trash2, Users, AlertCircle, X, Save, UserCheck, UserX,
-  Lock, Eye, EyeOff, Key, MapPin
+  Lock, Eye, EyeOff, Key, MapPin, Clock
 } from "lucide-react";
 import { getEmployees, createEmployee, updateEmployee, deleteEmployee, type Employee, type CreateEmployeeDto } from "@/lib/api/employees";
+import api from "@/lib/api/client";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 const MODAL_CLS = {
@@ -32,6 +33,17 @@ const AVATAR_COLORS = [
 ];
 const initials = (name: string) => name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "?";
 const avatarBg = (name: string) => AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+
+const DAYS = [
+  { value: 1, label: 'Mo' }, { value: 2, label: 'Di' }, { value: 3, label: 'Mi' },
+  { value: 4, label: 'Do' }, { value: 5, label: 'Fr' }, { value: 6, label: 'Sa' },
+  { value: 0, label: 'So' },
+];
+
+interface ScheduleItem { dayOfWeek: number; isWorkingDay: boolean; startTime: string; endTime: string; }
+
+const defaultSchedule = (): ScheduleItem[] =>
+  DAYS.map((d) => ({ dayOfWeek: d.value, isWorkingDay: d.value >= 1 && d.value <= 5, startTime: '09:00', endTime: '18:00' }));
 
 const EMPTY: CreateEmployeeDto = {
   name: "",
@@ -66,6 +78,16 @@ export default function EmployeesPage() {
   const { isOpen: isToggleModalOpen, onOpen: onToggleModalOpen, onClose: onToggleModalClose } = useDisclosure();
   const [toggling, setToggling] = useState(false);
   const [selectedEmployeeForToggle, setSelectedEmployeeForToggle] = useState<Employee | null>(null);
+
+  // Schedule modal
+  const { isOpen: isScheduleOpen, onOpen: onScheduleOpen, onClose: onScheduleClose } = useDisclosure();
+  const [scheduleEmployee, setScheduleEmployee] = useState<Employee | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleItem[]>(defaultSchedule());
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState('');
+  const [scheduleSaved, setScheduleSaved] = useState(false);
+
   const { confirm, dialog } = useConfirm();
 
   useEffect(() => { load(); }, [showInactive]);
@@ -211,6 +233,51 @@ export default function EmployeesPage() {
       setSelectedEmployeeForToggle(null);
     }
   }
+
+  async function openSchedule(emp: Employee) {
+    setScheduleEmployee(emp);
+    setSchedule(defaultSchedule());
+    setScheduleError('');
+    setScheduleSaved(false);
+    setScheduleLoading(true);
+    onScheduleOpen();
+    try {
+      const res = await api.get(`/employees/${emp.id}/schedule`);
+      const data: any[] = res.data?.data ?? [];
+      if (data.length > 0) {
+        setSchedule(DAYS.map((d) => {
+          const found = data.find((s: any) => s.dayOfWeek === d.value);
+          return found
+            ? { dayOfWeek: d.value, isWorkingDay: found.isWorkingDay, startTime: found.startTime ?? '09:00', endTime: found.endTime ?? '18:00' }
+            : { dayOfWeek: d.value, isWorkingDay: d.value >= 1 && d.value <= 5, startTime: '09:00', endTime: '18:00' };
+        }));
+      }
+    } catch { /* use defaults */ }
+    finally { setScheduleLoading(false); }
+  }
+
+  async function saveSchedule() {
+    if (!scheduleEmployee) return;
+    setScheduleSaving(true);
+    setScheduleError('');
+    try {
+      await api.put(`/employees/${scheduleEmployee.id}/schedule`, schedule.map((s) => ({
+        dayOfWeek: s.dayOfWeek,
+        isWorkingDay: s.isWorkingDay,
+        startTime: s.startTime || '09:00',
+        endTime: s.endTime || '18:00',
+      })));
+      setScheduleSaved(true);
+      setTimeout(() => setScheduleSaved(false), 3000);
+    } catch (e: any) {
+      setScheduleError(e.response?.data?.message || 'Fehler beim Speichern');
+    } finally {
+      setScheduleSaving(false);
+    }
+  }
+
+  const updateScheduleItem = (dayOfWeek: number, field: keyof ScheduleItem, value: string | boolean) =>
+    setSchedule((prev) => prev.map((s) => s.dayOfWeek === dayOfWeek ? { ...s, [field]: value } : s));
 
   const activeCount = employees.filter(e => e.isActive).length;
   const inactiveCount = employees.length - activeCount;
@@ -594,6 +661,16 @@ export default function EmployeesPage() {
                         isIconOnly
                         size="sm"
                         variant="flat"
+                        className="bg-[#F5EDEB] text-[#8A8A8A] hover:bg-[#E8C7C3]/30"
+                        onPress={() => openSchedule(emp)}
+                        title="Arbeitszeiten"
+                      >
+                        <Clock size={14} />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        size="sm"
+                        variant="flat"
                         className={emp.isActive ? "bg-amber-50 text-amber-600 hover:bg-amber-100" : "bg-[#017172]/10 text-[#017172] hover:bg-[#017172]/20"}
                         onPress={() => handleToggle(emp)}
                         title={emp.isActive ? "Deaktivieren" : "Aktivieren"}
@@ -822,6 +899,90 @@ export default function EmployeesPage() {
                   startContent={!submitting && <Save size={14} />}
                 >
                   {editing ? "Speichern" : "Hinzufügen"}
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Schedule Modal */}
+      <Modal isOpen={isScheduleOpen} onClose={onScheduleClose} size="md" placement="center" classNames={MODAL_CLS}>
+        <ModalContent>
+          {(close) => (
+            <>
+              <ModalHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#E8C7C3] flex items-center justify-center">
+                    <Clock size={16} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-[#1E1E1E]">Arbeitszeiten</h2>
+                    <p className="text-xs text-[#8A8A8A]">{scheduleEmployee?.name}</p>
+                  </div>
+                </div>
+              </ModalHeader>
+              <ModalBody>
+                {scheduleLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-4 border-[#E8C7C3]" />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {DAYS.map((day) => {
+                      const item = schedule.find((s) => s.dayOfWeek === day.value)!;
+                      return (
+                        <div key={day.value} className={`rounded-xl p-3 border-2 transition-colors ${item.isWorkingDay ? 'border-[#E8C7C3]/40 bg-white' : 'border-gray-100 bg-gray-50'}`}>
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              id={`sched-${day.value}`}
+                              checked={item.isWorkingDay}
+                              onChange={(e) => updateScheduleItem(day.value, 'isWorkingDay', e.target.checked)}
+                              className="w-4 h-4 accent-[#E8C7C3] cursor-pointer"
+                            />
+                            <label htmlFor={`sched-${day.value}`} className={`font-semibold text-sm cursor-pointer w-8 ${item.isWorkingDay ? 'text-[#1E1E1E]' : 'text-[#8A8A8A]'}`}>
+                              {day.label}
+                            </label>
+                            {item.isWorkingDay ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="time"
+                                  value={item.startTime}
+                                  onChange={(e) => updateScheduleItem(day.value, 'startTime', e.target.value)}
+                                  className="text-sm border border-gray-200 rounded-lg px-2 py-1 text-[#1E1E1E] bg-white"
+                                />
+                                <span className="text-[#8A8A8A] text-xs">–</span>
+                                <input
+                                  type="time"
+                                  value={item.endTime}
+                                  onChange={(e) => updateScheduleItem(day.value, 'endTime', e.target.value)}
+                                  className="text-sm border border-gray-200 rounded-lg px-2 py-1 text-[#1E1E1E] bg-white"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-xs text-[#8A8A8A]">Frei</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {scheduleError && <p className="text-xs text-red-600">{scheduleError}</p>}
+                    {scheduleSaved && <p className="text-xs text-green-600">Arbeitszeiten gespeichert!</p>}
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter className="gap-2">
+                <Button variant="flat" className="bg-white border border-[#E8C7C3]/40 text-[#1E1E1E] font-semibold" onPress={close} startContent={<X size={14} />}>
+                  Schließen
+                </Button>
+                <Button
+                  className="bg-gradient-to-r from-[#E8C7C3] to-[#D8B0AC] text-white font-semibold"
+                  onPress={saveSchedule}
+                  isLoading={scheduleSaving}
+                  startContent={!scheduleSaving && <Save size={14} />}
+                >
+                  Speichern
                 </Button>
               </ModalFooter>
             </>
