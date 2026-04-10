@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Clock, ExternalLink, Copy, Check,
-  Palette, Users, Link2, CreditCard, Mail, Phone, Globe, MapPin,
+  Palette, Users, Link2, CreditCard, Mail, Phone, Globe, MapPin, Upload, ImageIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRef } from 'react';
 import { superAdminApi, UpdateTenantSettingsPayload } from '@/lib/api/superadmin';
 
 type Tab = 'branding' | 'users' | 'link' | 'subscription';
@@ -22,6 +23,10 @@ export default function TenantDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>('link');
   const [copied, setCopied] = useState(false);
   const [extendingTrial, setExtendingTrial] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // New user form
   const [newUser, setNewUser] = useState({ email: '', password: '', firstName: '', lastName: '' });
@@ -50,6 +55,7 @@ export default function TenantDetailPage() {
     superAdminApi.getTenant(id)
       .then((data) => {
         setTenant(data);
+        if (data.settings?.logoUrl) setLogoUrl(data.settings.logoUrl);
         if (data.settings) {
           setSettings({
             companyName: data.settings.companyName ?? data.name,
@@ -106,6 +112,22 @@ export default function TenantDetailPage() {
       console.error(err);
     } finally {
       setExtendingTrial(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    setLogoError('');
+    try {
+      const result = await superAdminApi.uploadLogo(id, file);
+      setLogoUrl(result.logoUrl);
+    } catch (err: any) {
+      setLogoError(err?.response?.data?.message ?? 'Fehler beim Hochladen');
+    } finally {
+      setLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
     }
   };
 
@@ -278,6 +300,44 @@ export default function TenantDetailPage() {
       {activeTab === 'branding' && (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
           <h2 className="font-semibold text-gray-900">Branding & Firmeninfo</h2>
+
+          {/* Logo Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Logo</label>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {logoUrl ? (
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_API_URL}${logoUrl}`}
+                    alt="Logo"
+                    className="w-full h-full object-contain p-1"
+                  />
+                ) : (
+                  <ImageIcon size={22} className="text-gray-300" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+                <button
+                  type="button"
+                  disabled={logoUploading}
+                  onClick={() => logoInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <Upload size={13} />
+                  {logoUploading ? 'Hochladen…' : 'Logo hochladen'}
+                </button>
+                <p className="text-xs text-gray-400">JPG, PNG, WebP · max. 5 MB</p>
+                {logoError && <p className="text-xs text-red-500">{logoError}</p>}
+              </div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
