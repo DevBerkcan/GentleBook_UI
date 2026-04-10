@@ -6,10 +6,88 @@ import {
   Link2, Plus, Trash2, GripVertical, ExternalLink, Calendar,
   Instagram, MessageCircle, MapPin, Facebook, Youtube, Globe,
   Phone, Mail, Edit2, Check, X, Eye, CheckCircle2, AlertCircle,
-  ArrowUp, ArrowDown,
+  ArrowUp, ArrowDown, Palette, Loader2,
 } from "lucide-react";
 import api from "@/lib/api/client";
 import { useAuth } from "@/lib/contexts/AuthContext";
+
+// ── Theme Picker ─────────────────────────────────────────────────────────────
+
+type Theme = "gradient" | "dark" | "minimal" | "bold" | "glass";
+
+const THEMES: { value: Theme; label: string; desc: string; preview: { bg: string; card: string; text: string } }[] = [
+  {
+    value: "gradient",
+    label: "Gradient",
+    desc: "Sanfter Farbverlauf",
+    preview: { bg: "linear-gradient(135deg, #fde8e8 0%, #fff 100%)", card: "#ffffff", text: "#1a1a1a" },
+  },
+  {
+    value: "dark",
+    label: "Dark",
+    desc: "Dunkles Design",
+    preview: { bg: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%)", card: "rgba(255,255,255,0.08)", text: "#ffffff" },
+  },
+  {
+    value: "minimal",
+    label: "Minimal",
+    desc: "Klares Weiß",
+    preview: { bg: "#ffffff", card: "#f8f8f8", text: "#111111" },
+  },
+  {
+    value: "bold",
+    label: "Bold",
+    desc: "Vollfarbe",
+    preview: { bg: "linear-gradient(135deg, #E8C7C3 0%, #D8B0AC 100%)", card: "rgba(255,255,255,0.9)", text: "#1a1a1a" },
+  },
+  {
+    value: "glass",
+    label: "Glass",
+    desc: "Milchglas-Effekt",
+    preview: { bg: "linear-gradient(135deg, #f5c5c0 0%, #fde8e8 100%)", card: "rgba(255,255,255,0.45)", text: "#1a1a1a" },
+  },
+];
+
+function ThemePicker({ current, primaryColor, onChange }: { current: Theme; primaryColor: string; onChange: (t: Theme) => void }) {
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {THEMES.map((theme) => {
+        // Use primary color for bold/gradient previews
+        const bgStyle = theme.value === "bold"
+          ? `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}bb 100%)`
+          : theme.value === "gradient"
+          ? `linear-gradient(135deg, ${primaryColor}33 0%, #fff 100%)`
+          : theme.value === "glass"
+          ? `linear-gradient(135deg, ${primaryColor}55 0%, ${primaryColor}22 100%)`
+          : theme.preview.bg;
+
+        return (
+          <button
+            key={theme.value}
+            onClick={() => onChange(theme.value)}
+            className={`relative flex flex-col items-center gap-1.5 p-1 rounded-xl transition-all ${
+              current === theme.value ? "ring-2 ring-offset-1 ring-[#E8C7C3]" : "hover:opacity-80"
+            }`}
+            title={theme.desc}
+          >
+            {/* Mini preview */}
+            <div className="w-full h-14 rounded-lg overflow-hidden relative" style={{ background: bgStyle }}>
+              <div className="absolute inset-x-2 top-2 h-2.5 rounded-full"
+                style={{ background: theme.preview.card, opacity: 0.9 }} />
+              <div className="absolute inset-x-2 top-5.5 h-2 rounded-full mt-1"
+                style={{ background: theme.preview.card, opacity: 0.7 }} />
+              <div className="absolute inset-x-2 bottom-2 h-2 rounded-full"
+                style={{ background: theme.preview.card, opacity: 0.5 }} />
+            </div>
+            <span className={`text-[10px] font-semibold ${current === theme.value ? "text-[#E8C7C3]" : "text-gray-500"}`}>
+              {theme.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 const ICON_OPTIONS = [
   { value: "Instagram",  label: "Instagram",   icon: <Instagram size={16} /> },
@@ -72,13 +150,40 @@ export default function AdminLinksPage() {
 
   const tenantSlug = (user as any)?.tenantSlug;
 
+  // Theme state
+  const [theme, setTheme] = useState<Theme>("gradient");
+  const [primaryColor, setPrimaryColor] = useState("#E8C7C3");
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [themeSaving, setThemeSaving] = useState(false);
+
   const showToast = useCallback((type: "success" | "error", message: string) => {
     const id = ++toastCounter;
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   }, []);
 
-  useEffect(() => { loadLinks(); }, []);
+  useEffect(() => {
+    loadLinks();
+    // Load current theme + primary color from settings
+    api.get("/tenant/settings").then((res) => {
+      const d = res.data?.data ?? res.data;
+      if (d?.linktreeStyle) setTheme(d.linktreeStyle as Theme);
+      if (d?.primaryColor) setPrimaryColor(d.primaryColor);
+    }).catch(() => {});
+  }, []);
+
+  async function handleThemeChange(newTheme: Theme) {
+    setTheme(newTheme);
+    setThemeSaving(true);
+    try {
+      await api.put("/tenant/settings", { linktreeStyle: newTheme });
+      showToast("success", `Theme „${THEMES.find(t => t.value === newTheme)?.label}" gespeichert`);
+    } catch {
+      showToast("error", "Theme konnte nicht gespeichert werden");
+    } finally {
+      setThemeSaving(false);
+    }
+  }
 
   async function loadLinks() {
     setLoading(true);
@@ -227,6 +332,50 @@ export default function AdminLinksPage() {
               Link hinzufügen
             </button>
           </div>
+        </div>
+
+        {/* ── Theme Picker ────────────────────────────────────────────── */}
+        <div className="mb-4 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            onClick={() => setThemeOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3.5 text-sm hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <Palette size={16} className="text-[#E8C7C3]" />
+              <span className="font-semibold text-[#1E1E1E]">Seiten-Design</span>
+              <span className="text-xs text-[#8A8A8A] bg-[#F5EDEB] px-2 py-0.5 rounded-lg font-medium">
+                {THEMES.find(t => t.value === theme)?.label ?? "Gradient"}
+              </span>
+              {themeSaving && <Loader2 size={12} className="animate-spin text-[#E8C7C3]" />}
+            </div>
+            <span className={`text-gray-400 transition-transform duration-200 ${themeOpen ? "rotate-180" : ""}`}>▾</span>
+          </button>
+          <AnimatePresence>
+            {themeOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-4 pb-4 pt-1">
+                  <p className="text-xs text-[#8A8A8A] mb-3">Wähle das visuelle Design deiner öffentlichen Profilseite</p>
+                  <ThemePicker current={theme} primaryColor={primaryColor} onChange={handleThemeChange} />
+                  {tenantSlug && (
+                    <a
+                      href={`/booking/${tenantSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 flex items-center gap-1.5 text-xs text-[#E8C7C3] hover:underline"
+                    >
+                      <Eye size={12} /> Vorschau anzeigen
+                    </a>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* ── Add Link Form ───────────────────────────────────────────── */}

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { Card, CardBody } from "@nextui-org/card";
 import { Chip } from "@nextui-org/chip";
 import { Calendar, Clock, TrendingUp, TrendingDown, Users, Euro, Copy, Check, ExternalLink } from "lucide-react";
@@ -161,68 +162,53 @@ export default function AdminDashboardPage() {
         )}
 
         {/* ── Stat Cards ─────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-
-          {/* Bookings this month */}
-          <Card className="border border-[#E8C7C3]/30 shadow-xl">
-            <CardBody className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="p-2 sm:p-3 bg-[#017172]/10 rounded-lg">
-                  <Calendar className="text-[#017172]" size={20} />
-                </div>
-                {monthGrowth !== 0 && (
-                  <div className={`flex items-center gap-1 text-xs sm:text-sm ${monthGrowth > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                    {monthGrowth > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                    <span className="font-semibold">{Math.abs(monthGrowth).toFixed(0)}%</span>
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
+          initial="hidden" animate="visible"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1 } } }}
+        >
+          {[
+            {
+              icon: <Calendar className="text-[#017172]" size={20} />,
+              value: statistics.totalBookingsThisMonth,
+              label: "Buchungen diesen Monat",
+              badge: monthGrowth !== 0 ? { pct: monthGrowth } : null,
+            },
+            {
+              icon: <Euro className="text-[#017172]" size={20} />,
+              value: formatPrice(revenueThisMonth, defaultCurrency),
+              label: `Umsatz ${defaultCurrency} diesen Monat`,
+              badge: revenueGrowth !== 0 ? { pct: revenueGrowth } : null,
+            },
+            {
+              icon: <Users className="text-[#017172]" size={20} />,
+              value: statistics.totalCustomers,
+              label: `Gesamt Kunden (${statistics.newCustomersThisMonth} neu)`,
+              badge: null,
+            },
+          ].map((card, i) => (
+            <motion.div
+              key={i}
+              variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 22 } } }}
+            >
+              <Card className="border border-[#E8C7C3]/30 shadow-xl h-full">
+                <CardBody className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className="p-2 sm:p-3 bg-[#017172]/10 rounded-lg">{card.icon}</div>
+                    {card.badge && (
+                      <div className={`flex items-center gap-1 text-xs sm:text-sm ${card.badge.pct > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        {card.badge.pct > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        <span className="font-semibold">{Math.abs(card.badge.pct).toFixed(0)}%</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] mb-1">
-                {statistics.totalBookingsThisMonth}
-              </div>
-              <div className="text-xs sm:text-sm text-[#8A8A8A]">Buchungen diesen Monat</div>
-            </CardBody>
-          </Card>
-
-          {/* Revenue (default currency) */}
-          <Card className="border border-[#E8C7C3]/30 shadow-xl">
-            <CardBody className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="p-2 sm:p-3 bg-[#017172]/10 rounded-lg">
-                  <Euro className="text-[#017172]" size={20} />
-                </div>
-                {revenueGrowth !== 0 && (
-                  <div className={`flex items-center gap-1 text-xs sm:text-sm ${revenueGrowth > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                    {revenueGrowth > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                    <span className="font-semibold">{Math.abs(revenueGrowth).toFixed(0)}%</span>
-                  </div>
-                )}
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] mb-1">
-                {formatPrice(revenueThisMonth, defaultCurrency)}
-              </div>
-              <div className="text-xs sm:text-sm text-[#8A8A8A]">Umsatz {defaultCurrency} diesen Monat</div>
-            </CardBody>
-          </Card>
-
-          {/* Customers */}
-          <Card className="border border-[#E8C7C3]/30 shadow-xl">
-            <CardBody className="p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="p-2 sm:p-3 bg-[#017172]/10 rounded-lg">
-                  <Users className="text-[#017172]" size={20} />
-                </div>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] mb-1">
-                {statistics.totalCustomers}
-              </div>
-              <div className="text-xs sm:text-sm text-[#8A8A8A]">
-                Gesamt Kunden ({statistics.newCustomersThisMonth} neu)
-              </div>
-            </CardBody>
-          </Card>
-
-        </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] mb-1">{card.value}</div>
+                  <div className="text-xs sm:text-sm text-[#8A8A8A]">{card.label}</div>
+                </CardBody>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
 
         {/* ── Main Grid ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
