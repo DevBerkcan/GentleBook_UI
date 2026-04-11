@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AdminNav } from '@/components/admin/AdminNav';
+import { SupportWidget } from '@/components/admin/SupportWidget';
 import { AuthProvider, useAuth } from '@/lib/contexts/AuthContext';
 import { MessageCircle, Mail, LockKeyhole } from 'lucide-react';
 import api from '@/lib/api/client';
@@ -96,6 +97,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         <main className="flex-1 min-w-0 md:ml-[230px] pt-14 md:pt-0 overflow-x-hidden">
           {children}
         </main>
+        <SupportWidget />
         {trialExpired && <TrialExpiredModal />}
       </div>
     );
