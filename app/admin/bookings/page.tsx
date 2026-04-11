@@ -14,18 +14,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
 import {
   Search, ChevronLeft, ChevronRight, Edit, Filter, X, Calendar, CheckCircle,
   Trash2, AlertTriangle, Plus, Clock, User, Phone, Mail, Ban, Scissors, ChevronRight as ChevronRightIcon,
-  Save,
-  Check
+  Save, Check, Download, Send
 } from "lucide-react";
 import moment from "moment";
 
 import {
   getBookings, updateBookingStatus, deleteBooking, getServices, createManualBooking,
+  resendConfirmation, getBookingsExportUrl,
   type BookingListItem, type BookingFilter, type Service, type CreateManualBookingDto,
   type ManualBookingResponse,
   getServicesByEmployee,
   checkEmailConflict
 } from "@/lib/api/admin";
+import api from "@/lib/api/client";
 import { getAvailability, getEmployees, type TimeSlot, type Employee } from "@/lib/api/booking";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -86,6 +87,9 @@ export default function AdminBookingsPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [isServicePopoverOpen, setIsServicePopoverOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // In AdminBookingsPage component, add these states
   const [employeeServices, setEmployeeServices] = useState<Service[]>([]);
@@ -150,6 +154,7 @@ export default function AdminBookingsPage() {
   function openBookingDetails(booking: BookingListItem) {
     setSelectedBookingDetails(booking);
     setIsEditMode(false);
+    setResendSuccess(false);
     onBookingDetailsModalOpen();
   }
 
@@ -439,6 +444,40 @@ export default function AdminBookingsPage() {
     }
   }
 
+  async function handleResendConfirmation(bookingId: string) {
+    setResending(true);
+    setResendSuccess(false);
+    try {
+      await resendConfirmation(bookingId);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 3000);
+    } catch (err: any) {
+      alert("Fehler: " + (err.response?.data?.message || err.message));
+    } finally {
+      setResending(false);
+    }
+  }
+
+  async function handleExportCsv() {
+    setExportLoading(true);
+    try {
+      const url = await getBookingsExportUrl({ status: filter.status, fromDate: filter.fromDate, toDate: filter.toDate });
+      const response = await api.get(url, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `buchungen_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch (err: any) {
+      alert("Export fehlgeschlagen: " + err.message);
+    } finally {
+      setExportLoading(false);
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Confirmed": return "success";
@@ -542,16 +581,29 @@ export default function AdminBookingsPage() {
               {isAdmin ? "Alle Buchungen verwalten (Admin)" : "Ihre persönlichen Buchungen verwalten"}
             </p>
           </div>
-          <Button
-            className="bg-gradient-to-r from-[#017172] to-[#015f60] text-white font-semibold shadow-lg shadow-[#017172]/20"
-            startContent={<Plus size={18} />}
-            onPress={() => {
-              resetManualBookingForm();
-              onManualBookingModalOpen();
-            }}
-          >
-            Buchung erstellen
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="flat"
+              className="bg-white border border-[#E8C7C3]/40 text-[#017172] font-semibold"
+              startContent={exportLoading
+                ? <span className="w-4 h-4 rounded-full border-2 border-[#017172]/30 border-t-[#017172] animate-spin" />
+                : <Download size={16} />}
+              onPress={handleExportCsv}
+              isDisabled={exportLoading}
+            >
+              CSV Export
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-[#017172] to-[#015f60] text-white font-semibold shadow-lg shadow-[#017172]/20"
+              startContent={<Plus size={18} />}
+              onPress={() => {
+                resetManualBookingForm();
+                onManualBookingModalOpen();
+              }}
+            >
+              Buchung erstellen
+            </Button>
+          </div>
         </div>
 
         {/* ── Desktop filter bar ─────────────────────────────────────────── */}
@@ -747,6 +799,23 @@ export default function AdminBookingsPage() {
                   >
                     Schließen
                   </Button>
+                  {!isEditMode && selectedBookingDetails?.status !== 'Cancelled' && (
+                    <Button
+                      variant="flat"
+                      className={resendSuccess
+                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200 font-semibold"
+                        : "bg-[#F5EDEB] text-[#017172] border border-[#E8C7C3]/40 font-semibold"}
+                      startContent={resendSuccess
+                        ? <CheckCircle size={14} />
+                        : resending
+                          ? <span className="w-3.5 h-3.5 rounded-full border-2 border-[#017172]/30 border-t-[#017172] animate-spin" />
+                          : <Send size={14} />}
+                      isDisabled={resending}
+                      onPress={() => handleResendConfirmation(selectedBookingDetails!.id)}
+                    >
+                      {resendSuccess ? 'Gesendet!' : 'Bestätigung senden'}
+                    </Button>
+                  )}
                   {!isEditMode && (
                     <Button
                       className="bg-gradient-to-r from-[#017172] to-[#015f60] text-white font-semibold shadow-lg shadow-[#017172]/20"

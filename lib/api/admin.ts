@@ -292,6 +292,22 @@ export async function deleteBooking(
   return response.data;
 }
 
+export async function resendConfirmation(
+  bookingId: string
+): Promise<{ message: string }> {
+  const response = await api.post(`/admin/bookings/${bookingId}/resend-confirmation`);
+  return response.data;
+}
+
+export async function getBookingsExportUrl(filter: Pick<BookingFilter, 'status' | 'fromDate' | 'toDate'>): Promise<string> {
+  const params = new URLSearchParams();
+  if (filter.status) params.append('status', filter.status);
+  if (filter.fromDate) params.append('fromDate', filter.fromDate);
+  if (filter.toDate) params.append('toDate', filter.toDate);
+  // Return the full URL; caller will use axios with responseType: 'blob'
+  return `/admin/bookings/export?${params}`;
+}
+
 // ── Manual booking ────────────────────────────────────────────────────────────
 
 export async function createManualBooking(

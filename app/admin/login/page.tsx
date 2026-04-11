@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, User, Eye, EyeOff, Mail, Building2, Sparkles, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 type LoginMode = 'employee' | 'admin';
@@ -218,6 +219,17 @@ export default function AdminLoginPage() {
                 <>Anmelden <ArrowRight size={15} /></>
               )}
             </motion.button>
+
+            {mode === 'admin' && (
+              <div className="text-center pt-1">
+                <Link
+                  href="/admin/forgot-password"
+                  className="text-sm text-white/35 hover:text-white/60 transition-colors"
+                >
+                  Passwort vergessen?
+                </Link>
+              </div>
+            )}
           </form>
         </div>
       </motion.div>

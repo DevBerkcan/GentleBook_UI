@@ -455,6 +455,15 @@ export default function TenantLinktreePage() {
                 </motion.span>
               </a>
             )}
+            <div className="mt-2 text-center">
+              <a
+                href="/my-bookings"
+                className="text-xs opacity-50 hover:opacity-80 transition-opacity"
+                style={{ color: t.textPrimary }}
+              >
+                Meine Buchungen anzeigen →
+              </a>
+            </div>
           </motion.div>
 
           {/* Custom links — list or grid */}
