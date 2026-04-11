@@ -3,364 +3,392 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Card, CardBody } from "@nextui-org/card";
-import { Chip } from "@nextui-org/chip";
-import { Calendar, Clock, TrendingUp, TrendingDown, Users, Euro, Copy, Check, ExternalLink } from "lucide-react";
+import {
+  Calendar, Clock, TrendingUp, TrendingDown, Users,
+  Euro, Copy, Check, ExternalLink, Sparkles,
+  ArrowUpRight, ChevronRight,
+} from "lucide-react";
 import { getDashboard, type DashboardOverview } from "@/lib/api/admin";
 import { formatPrice } from "@/lib/utils/currency";
 import { useAuth } from "@/lib/contexts/AuthContext";
 
+// ── helpers ──────────────────────────────────────────────────────────────
+
+const STATUS_MAP: Record<string, { label: string; dot: string; bg: string; text: string }> = {
+  Confirmed:  { label: "Bestätigt",       dot: "bg-emerald-400", bg: "bg-emerald-50",  text: "text-emerald-700" },
+  Pending:    { label: "Ausstehend",      dot: "bg-amber-400",   bg: "bg-amber-50",    text: "text-amber-700"   },
+  Completed:  { label: "Abgeschlossen",   dot: "bg-[#017172]",   bg: "bg-teal-50",     text: "text-teal-700"    },
+  Cancelled:  { label: "Storniert",       dot: "bg-red-400",     bg: "bg-red-50",      text: "text-red-600"     },
+  NoShow:     { label: "Nicht erschienen",dot: "bg-gray-400",    bg: "bg-gray-100",    text: "text-gray-600"    },
+};
+
+function formatTime(mins: number) {
+  if (mins < 60)   return `${mins} Min`;
+  if (mins < 1440) return `${Math.floor(mins / 60)} Std`;
+  const d = Math.floor(mins / 1440);
+  return `${d} Tag${d > 1 ? "e" : ""}`;
+}
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Guten Morgen";
+  if (h < 17) return "Guten Tag";
+  return "Guten Abend";
+}
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
+};
+const fadeUp = {
+  hidden:  { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 22 } },
+};
+
+// ── StatCard ──────────────────────────────────────────────────────────────
+function StatCard({
+  icon, value, label, growth, accent,
+}: {
+  icon: React.ReactNode;
+  value: string | number;
+  label: string;
+  growth?: number | null;
+  accent: string;
+}) {
+  return (
+    <motion.div variants={fadeUp}
+      className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
+      style={{ borderTop: `3px solid ${accent}` }}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accent}18` }}>
+          {icon}
+        </div>
+        {growth != null && growth !== 0 && (
+          <span className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-1 rounded-full ${
+            growth > 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
+          }`}>
+            {growth > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {Math.abs(growth).toFixed(0)}%
+          </span>
+        )}
+      </div>
+      <div className="text-3xl font-bold text-[#1E1E1E] mb-1 tabular-nums">{value}</div>
+      <div className="text-xs text-[#8A8A8A] font-medium">{label}</div>
+    </motion.div>
+  );
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
   const { user, isTenantAdmin } = useAuth();
-  const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [defaultCurrency, setDefaultCurrency] = useState<string>('EUR');
+  const [dashboard,        setDashboard]       = useState<DashboardOverview | null>(null);
+  const [loading,          setLoading]          = useState(true);
+  const [error,            setError]            = useState<string | null>(null);
+  const [copied,           setCopied]           = useState(false);
+  const [defaultCurrency,  setDefaultCurrency]  = useState("EUR");
 
   useEffect(() => {
-    loadDashboard();
-    // Fetch tenant settings to get defaultCurrency
-    import('@/lib/api/client').then(({ default: api }) => {
-      api.get('/tenant/settings').then((res) => {
-        const data = res.data?.data ?? res.data;
-        if (data?.defaultCurrency) setDefaultCurrency(data.defaultCurrency);
-      }).catch(() => {/* ignore */});
+    getDashboard()
+      .then(setDashboard)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+
+    import("@/lib/api/client").then(({ default: api }) => {
+      api.get("/tenant/settings").then((res) => {
+        const d = res.data?.data ?? res.data;
+        if (d?.defaultCurrency) setDefaultCurrency(d.defaultCurrency);
+      }).catch(() => {});
     });
   }, []);
 
-  async function loadDashboard() {
-    try {
-      const data = await getDashboard();
-      setDashboard(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5EDEB] to-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#017172]" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F2EFED]">
+        <div className="w-10 h-10 rounded-full border-4 border-[#017172] border-t-transparent animate-spin" />
       </div>
     );
   }
 
   if (error || !dashboard) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5EDEB] to-white flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 text-center border-2 border-[#E8C7C3]/20">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">❌</span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#1E1E1E] mb-2">Fehler</h1>
-          <p className="text-[#8A8A8A] mb-6">
-            {error || "Dashboard konnte nicht geladen werden"}
-          </p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F2EFED] p-4">
+        <div className="bg-white rounded-3xl shadow-xl p-10 text-center max-w-sm">
+          <p className="text-2xl mb-3">⚠️</p>
+          <h2 className="text-lg font-bold text-[#1E1E1E] mb-2">Fehler beim Laden</h2>
+          <p className="text-sm text-[#8A8A8A]">{error || "Dashboard nicht verfügbar"}</p>
         </div>
       </div>
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Confirmed": return "success";
-      case "Pending": return "warning";
-      case "Completed": return "primary";
-      case "Cancelled": return "danger";
-      case "NoShow": return "default";
-      default: return "default";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "Confirmed": return "Bestätigt";
-      case "Pending": return "Ausstehend";
-      case "Completed": return "Abgeschlossen";
-      case "Cancelled": return "Storniert";
-      case "NoShow": return "Nicht erschienen";
-      default: return status;
-    }
-  };
-
-  const formatTime = (minutesUntil: number) => {
-    if (minutesUntil < 60) return `${minutesUntil} Min`;
-    if (minutesUntil < 1440) return `${Math.floor(minutesUntil / 60)} Std`;
-    return `${Math.floor(minutesUntil / 1440)} Tag${Math.floor(minutesUntil / 1440) > 1 ? "e" : ""}`;
-  };
-
   const { today, nextBooking, statistics } = dashboard;
 
-  const monthGrowth =
-    statistics.totalBookingsLastMonth > 0
-      ? ((statistics.totalBookingsThisMonth - statistics.totalBookingsLastMonth) /
-        statistics.totalBookingsLastMonth) *
-      100
-      : 0;
+  const revenueThis = defaultCurrency === "CHF" ? statistics.revenueThisMonthCHF  : statistics.revenueThisMonthEUR;
+  const revenueLast = defaultCurrency === "CHF" ? statistics.revenueLastMonthCHF  : statistics.revenueLastMonthEUR;
 
-  const revenueThisMonth = defaultCurrency === 'CHF' ? statistics.revenueThisMonthCHF : statistics.revenueThisMonthEUR;
-  const revenueLastMonth = defaultCurrency === 'CHF' ? statistics.revenueLastMonthCHF : statistics.revenueLastMonthEUR;
+  const monthGrowth   = statistics.totalBookingsLastMonth > 0
+    ? ((statistics.totalBookingsThisMonth - statistics.totalBookingsLastMonth) / statistics.totalBookingsLastMonth) * 100 : 0;
+  const revenueGrowth = revenueLast > 0
+    ? ((revenueThis - revenueLast) / revenueLast) * 100 : 0;
 
-  const revenueGrowth =
-    revenueLastMonth > 0
-      ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
-      : 0;
+  const todayDate = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5EDEB] to-white py-6 sm:py-8 px-3 sm:px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#F2EFED]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] mb-1">Dashboard</h1>
-          <p className="text-sm text-[#8A8A8A]">Übersicht und Statistiken</p>
-        </div>
+        {/* ── Header ───────────────────────────────────────────────── */}
+        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+          <p className="text-xs text-[#8A8A8A] font-medium mb-0.5">{todayDate}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1E1E]">
+            {greeting()}{user?.firstName ? `, ${user.firstName}` : ""}! 👋
+          </h1>
+          <p className="text-sm text-[#8A8A8A] mt-1">Hier ist deine heutige Übersicht.</p>
+        </motion.div>
 
-        {/* ── Booking Link Banner ─────────────────────────────────────────── */}
+        {/* ── Booking Link Banner ───────────────────────────────────── */}
         {isTenantAdmin && user?.tenantSlug && (
-          <div className="mb-6 sm:mb-8 bg-gradient-to-r from-[#017172] to-[#01a0a2] rounded-2xl p-5 sm:p-6 shadow-lg">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="relative overflow-hidden rounded-2xl p-5 text-white"
+            style={{ background: "linear-gradient(135deg, #017172 0%, #01a0a2 50%, #01b8ba 100%)" }}
+          >
+            {/* Decorative blobs */}
+            <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
+            <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-white/8 rounded-full" />
+
+            <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-white/80 text-xs sm:text-sm font-medium mb-1">Ihr Buchungslink</p>
-                <div className="flex items-center gap-2 min-w-0">
-                  <code className="text-white text-sm sm:text-base font-mono truncate">
-                    /booking/{user.tenantSlug}
-                  </code>
+                <div className="flex items-center gap-2 mb-1">
+                  <ExternalLink size={14} className="opacity-70" />
+                  <p className="text-white/70 text-xs font-medium">Dein Buchungslink</p>
                 </div>
-                {user.tenantName && (
-                  <p className="text-white/60 text-xs mt-1">{user.tenantName}</p>
-                )}
+                <p className="text-white font-mono text-sm sm:text-base font-semibold truncate">
+                  {typeof window !== "undefined" ? window.location.origin : ""}/booking/{user.tenantSlug}
+                </p>
+                {user.tenantName && <p className="text-white/50 text-xs mt-0.5">{user.tenantName}</p>}
               </div>
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => {
-                    const url = `${window.location.origin}/booking/${user.tenantSlug}`;
-                    navigator.clipboard.writeText(url);
+                    navigator.clipboard.writeText(`${window.location.origin}/booking/${user.tenantSlug}`);
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
-                  className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                  className="flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors backdrop-blur-sm"
                 >
-                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? "Kopiert!" : "Kopieren"}
                 </button>
                 <a
                   href={`/booking/${user.tenantSlug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 bg-white text-[#017172] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors"
+                  className="flex items-center gap-1.5 bg-white text-[#017172] px-4 py-2 rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors shadow-sm"
                 >
-                  <ExternalLink size={15} />
-                  Öffnen
+                  <ArrowUpRight size={14} /> Öffnen
                 </a>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* ── Stat Cards ─────────────────────────────────────────────────── */}
+        {/* ── Stat Cards ────────────────────────────────────────────── */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8"
-          initial="hidden" animate="visible"
-          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1 } } }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+          variants={stagger} initial="hidden" animate="visible"
         >
-          {[
-            {
-              icon: <Calendar className="text-[#017172]" size={20} />,
-              value: statistics.totalBookingsThisMonth,
-              label: "Buchungen diesen Monat",
-              badge: monthGrowth !== 0 ? { pct: monthGrowth } : null,
-            },
-            {
-              icon: <Euro className="text-[#017172]" size={20} />,
-              value: formatPrice(revenueThisMonth, defaultCurrency),
-              label: `Umsatz ${defaultCurrency} diesen Monat`,
-              badge: revenueGrowth !== 0 ? { pct: revenueGrowth } : null,
-            },
-            {
-              icon: <Users className="text-[#017172]" size={20} />,
-              value: statistics.totalCustomers,
-              label: `Gesamt Kunden (${statistics.newCustomersThisMonth} neu)`,
-              badge: null,
-            },
-          ].map((card, i) => (
-            <motion.div
-              key={i}
-              variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 22 } } }}
-            >
-              <Card className="border border-[#E8C7C3]/30 shadow-xl h-full">
-                <CardBody className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <div className="p-2 sm:p-3 bg-[#017172]/10 rounded-lg">{card.icon}</div>
-                    {card.badge && (
-                      <div className={`flex items-center gap-1 text-xs sm:text-sm ${card.badge.pct > 0 ? "text-emerald-600" : "text-red-500"}`}>
-                        {card.badge.pct > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                        <span className="font-semibold">{Math.abs(card.badge.pct).toFixed(0)}%</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold text-[#1E1E1E] mb-1">{card.value}</div>
-                  <div className="text-xs sm:text-sm text-[#8A8A8A]">{card.label}</div>
-                </CardBody>
-              </Card>
-            </motion.div>
-          ))}
+          <StatCard
+            icon={<Calendar size={20} style={{ color: "#017172" }} />}
+            value={statistics.totalBookingsThisMonth}
+            label="Buchungen diesen Monat"
+            growth={monthGrowth}
+            accent="#017172"
+          />
+          <StatCard
+            icon={<Euro size={20} style={{ color: "#E8C7C3" }} />}
+            value={formatPrice(revenueThis, defaultCurrency)}
+            label={`Umsatz ${defaultCurrency} diesen Monat`}
+            growth={revenueGrowth}
+            accent="#D8B0AC"
+          />
+          <StatCard
+            icon={<Users size={20} style={{ color: "#8B5CF6" }} />}
+            value={statistics.totalCustomers}
+            label={`Kunden gesamt (${statistics.newCustomersThisMonth} neu)`}
+            growth={null}
+            accent="#8B5CF6"
+          />
         </motion.div>
 
-        {/* ── Main Grid ──────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ── Main Grid ────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-          {/* Today */}
-          <div className="lg:col-span-2">
-            <Card className="border border-[#E8C7C3]/30 shadow-xl h-full">
-              <CardBody className="p-4 sm:p-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-[#1E1E1E] mb-4 sm:mb-6">Heute</h2>
-
-                {/* Mini stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                  <div className="text-center p-3 sm:p-4 bg-[#F5EDEB] rounded-lg border border-[#E8C7C3]/30">
-                    <div className="text-xl sm:text-2xl font-bold text-[#1E1E1E]">{today.totalBookings}</div>
-                    <div className="text-xs sm:text-sm text-[#8A8A8A]">Gesamt</div>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-[#F5EDEB] rounded-lg border border-[#017172]/20">
-                    <div className="text-xl sm:text-2xl font-bold text-[#017172]">{today.completedBookings}</div>
-                    <div className="text-xs sm:text-sm text-[#8A8A8A]">Erledigt</div>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-amber-50 rounded-lg border border-amber-100">
-                    <div className="text-xl sm:text-2xl font-bold text-amber-600">{today.pendingBookings}</div>
-                    <div className="text-xs sm:text-sm text-amber-500 font-medium">Ausstehend</div>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-red-50 rounded-lg border border-red-100">
-                    <div className="text-xl sm:text-2xl font-bold text-red-400">{today.cancelledBookings}</div>
-                    <div className="text-xs sm:text-sm text-red-400 font-medium">Storniert</div>
-                  </div>
+          {/* ── Today Column ─────────────────────────────────────── */}
+          <motion.div
+            className="lg:col-span-2"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          >
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              {/* Card Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+                <div>
+                  <h2 className="text-base font-bold text-[#1E1E1E]">Heute</h2>
+                  <p className="text-xs text-[#8A8A8A]">{todayDate}</p>
                 </div>
+                <div className="flex items-center gap-1.5 text-xs text-[#8A8A8A]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Live
+                </div>
+              </div>
 
-                {/* Appointment list */}
+              {/* Mini stats */}
+              <div className="grid grid-cols-4 divide-x divide-gray-50 border-b border-gray-50">
+                {[
+                  { value: today.totalBookings,     label: "Gesamt",     color: "text-[#1E1E1E]",  bg: "" },
+                  { value: today.completedBookings, label: "Erledigt",   color: "text-emerald-600", bg: "bg-emerald-50/50" },
+                  { value: today.pendingBookings,   label: "Ausstehend", color: "text-amber-600",   bg: "bg-amber-50/50" },
+                  { value: today.cancelledBookings, label: "Storniert",  color: "text-red-400",     bg: "bg-red-50/30" },
+                ].map(({ value, label, color, bg }) => (
+                  <div key={label} className={`text-center py-4 px-2 ${bg}`}>
+                    <div className={`text-2xl font-bold tabular-nums ${color}`}>{value}</div>
+                    <div className="text-[11px] text-[#8A8A8A] mt-0.5 font-medium">{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bookings list */}
+              <div className="p-5">
                 {today.bookings.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-[#1E1E1E] text-sm sm:text-base mb-2 sm:mb-3">
-                      Heutige Termine
-                    </h3>
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                      {today.bookings.map((booking) => (
-                        <div
-                          key={booking.id}
-                          className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-[#F5EDEB] rounded-lg border border-[#E8C7C3]/30 hover:border-[#017172]/30 transition-colors gap-3"
+                  <div className="space-y-2.5 max-h-[380px] overflow-y-auto">
+                    {today.bookings.map((b, i) => {
+                      const s = STATUS_MAP[b.status] ?? STATUS_MAP["Pending"];
+                      return (
+                        <motion.div
+                          key={b.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.04 }}
+                          className="flex items-center gap-4 p-3.5 rounded-xl bg-[#F8F6F5] hover:bg-[#F2EFED] transition-colors border border-transparent hover:border-gray-100"
                         >
+                          {/* Time */}
+                          <div className="text-center min-w-[52px]">
+                            <div className="text-sm font-bold text-[#1E1E1E] tabular-nums">{b.startTime}</div>
+                            <div className="text-[11px] text-[#8A8A8A]">{b.endTime}</div>
+                          </div>
+                          {/* Status dot */}
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />
+                          {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className="font-semibold text-[#1E1E1E] text-sm sm:text-base">
-                                {booking.startTime}
-                              </span>
-                              <span className="text-[#8A8A8A] text-xs sm:text-sm">–</span>
-                              <span className="text-[#8A8A8A] text-xs sm:text-sm">{booking.endTime}</span>
-                              <Chip color={getStatusColor(booking.status)} size="sm" variant="flat" className="ml-0 sm:ml-2">
-                                {getStatusLabel(booking.status)}
-                              </Chip>
-                            </div>
-                            <div className="text-[#1E1E1E] font-medium text-sm sm:text-base break-words">
-                              {booking.customerName}
-                            </div>
-                            <div className="text-xs sm:text-sm text-[#8A8A8A] break-words">
-                              {booking.serviceName}
-                            </div>
+                            <p className="text-sm font-semibold text-[#1E1E1E] truncate">{b.customerName}</p>
+                            <p className="text-xs text-[#8A8A8A] truncate">{b.serviceName}</p>
                           </div>
-                          <div className="text-right flex sm:block justify-between items-center">
-                            <div className="font-bold text-[#017172] text-base sm:text-lg">
-                              {formatPrice(booking.price, booking.currency)}
-                            </div>
-                            <div className="text-xs text-[#8A8A8A] font-mono">
-                              {booking.bookingNumber.slice(-6)}
-                            </div>
+                          {/* Status badge */}
+                          <span className={`hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full ${s.bg} ${s.text} whitespace-nowrap`}>
+                            {s.label}
+                          </span>
+                          {/* Price */}
+                          <div className="text-right min-w-[64px]">
+                            <div className="text-sm font-bold text-[#017172] tabular-nums">{formatPrice(b.price, b.currency)}</div>
+                            <div className="text-[10px] text-[#8A8A8A] font-mono">{b.bookingNumber.slice(-6)}</div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="text-center py-8 sm:py-12 text-[#8A8A8A]">
-                    <Calendar className="mx-auto mb-4 text-[#E8C7C3]" size={40} />
-                    <p className="text-sm sm:text-base">Keine Termine für heute</p>
+                  <div className="text-center py-12">
+                    <div className="w-14 h-14 bg-[#F2EFED] rounded-2xl flex items-center justify-center mx-auto mb-3">
+                      <Calendar size={22} className="text-[#E8C7C3]" />
+                    </div>
+                    <p className="text-sm font-medium text-[#8A8A8A]">Keine Termine heute</p>
+                    <p className="text-xs text-[#8A8A8A]/60 mt-1">Genieße den freien Tag!</p>
                   </div>
                 )}
-              </CardBody>
-            </Card>
-          </div>
+              </div>
+            </div>
+          </motion.div>
 
-          {/* Right column */}
-          <div className="space-y-6">
+          {/* ── Right Column ────────────────────────────────────── */}
+          <div className="space-y-5">
 
             {/* Next Booking */}
-            {nextBooking && (
-              <Card className="border border-[#E8C7C3]/30 shadow-xl">
-                <CardBody className="p-4 sm:p-6">
-                  <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                    <div className="p-2 bg-[#017172]/10 rounded-lg">
-                      <Clock className="text-[#017172]" size={18} />
-                    </div>
-                    <h3 className="font-bold text-[#1E1E1E] text-base sm:text-lg">Nächster Termin</h3>
+            {nextBooking ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+              >
+                <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#017172]/10 flex items-center justify-center">
+                    <Clock size={16} className="text-[#017172]" />
                   </div>
-                  <div className="mb-3 sm:mb-4">
-                    <div className="text-2xl sm:text-3xl font-bold text-[#017172] mb-1">
+                  <h3 className="font-bold text-[#1E1E1E] text-sm">Nächster Termin</h3>
+                </div>
+                <div className="p-5">
+                  {/* Countdown */}
+                  <div className="text-center mb-4 py-4 bg-gradient-to-br from-[#017172]/8 to-[#01a0a2]/5 rounded-xl border border-[#017172]/10">
+                    <div className="text-4xl font-black text-[#017172] tabular-nums">
                       {formatTime(nextBooking.minutesUntil)}
                     </div>
-                    <div className="text-xs sm:text-sm text-[#8A8A8A]">bis zum nächsten Termin</div>
+                    <div className="text-xs text-[#8A8A8A] mt-1">bis zum nächsten Termin</div>
                   </div>
-                  <div className="space-y-2 bg-[#F5EDEB] p-3 sm:p-4 rounded-lg border border-[#E8C7C3]/30">
+                  {/* Details */}
+                  <div className="space-y-2.5">
                     {[
-                      { label: "Service", value: nextBooking.serviceName },
-                      { label: "Kunde", value: nextBooking.customerName },
-                      { label: "Zeit", value: `${nextBooking.startTime} – ${nextBooking.endTime}`, nowrap: true },
-                      { label: "Datum", value: new Date(nextBooking.date).toLocaleDateString("de-DE"), nowrap: true },
-                    ].map(({ label, value, nowrap }) => (
-                      <div key={label} className="flex justify-between gap-2">
-                        <span className="text-xs sm:text-sm text-[#8A8A8A] shrink-0">{label}:</span>
-                        <span className={`text-xs sm:text-sm font-semibold text-[#1E1E1E] text-right ${nowrap ? "whitespace-nowrap" : "break-words"}`}>
-                          {value}
-                        </span>
+                      { label: "Service",  value: nextBooking.serviceName },
+                      { label: "Kunde",    value: nextBooking.customerName },
+                      { label: "Uhrzeit",  value: `${nextBooking.startTime} – ${nextBooking.endTime}` },
+                      { label: "Datum",    value: new Date(nextBooking.date).toLocaleDateString("de-DE") },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between gap-3">
+                        <span className="text-xs text-[#8A8A8A] flex-shrink-0">{label}</span>
+                        <span className="text-xs font-semibold text-[#1E1E1E] text-right truncate">{value}</span>
                       </div>
                     ))}
                   </div>
-                </CardBody>
-              </Card>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center"
+              >
+                <div className="w-12 h-12 bg-[#F2EFED] rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <Sparkles size={20} className="text-[#E8C7C3]" />
+                </div>
+                <p className="text-sm font-medium text-[#8A8A8A]">Kein bevorstehender Termin</p>
+              </motion.div>
             )}
 
             {/* Popular Services */}
             {statistics.popularServices.length > 0 && (
-              <Card className="border border-[#E8C7C3]/30 shadow-xl">
-                <CardBody className="p-4 sm:p-6">
-                  <h3 className="font-bold text-[#1E1E1E] text-base sm:text-lg mb-3 sm:mb-4">
-                    Beliebte Services
-                  </h3>
-                  <div className="space-y-2 sm:space-y-3">
-                    {statistics.popularServices.map((service, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 sm:p-3 bg-[#F5EDEB] rounded-lg border border-[#E8C7C3]/30 gap-2"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-[#1E1E1E] text-sm sm:text-base break-words">
-                            {service.serviceName}
-                          </div>
-                          <div className="text-xs sm:text-sm text-[#8A8A8A]">
-                            {service.bookingCount} Buchungen
-                          </div>
-                        </div>
-                        <div className="font-bold text-[#017172] text-sm sm:text-base whitespace-nowrap text-right">
-                          {formatPrice(
-                            defaultCurrency === "CHF" ? service.revenueCHF : service.revenueEUR,
-                            defaultCurrency
-                          )}
-                        </div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+              >
+                <div className="px-5 py-4 border-b border-gray-50">
+                  <h3 className="font-bold text-[#1E1E1E] text-sm">Beliebte Services</h3>
+                </div>
+                <div className="p-3">
+                  {statistics.popularServices.map((s, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#F8F6F5] transition-colors">
+                      {/* Rank */}
+                      <span className="text-xs font-bold text-[#8A8A8A] w-4 text-center">{idx + 1}</span>
+                      {/* Service */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#1E1E1E] truncate">{s.serviceName}</p>
+                        <p className="text-xs text-[#8A8A8A]">{s.bookingCount}× gebucht</p>
                       </div>
-                    ))}
-                  </div>
-                </CardBody>
-              </Card>
+                      {/* Revenue */}
+                      <span className="text-sm font-bold text-[#017172] whitespace-nowrap">
+                        {formatPrice(defaultCurrency === "CHF" ? s.revenueCHF : s.revenueEUR, defaultCurrency)}
+                      </span>
+                      <ChevronRight size={13} className="text-gray-200 flex-shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
             )}
           </div>
         </div>

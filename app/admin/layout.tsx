@@ -90,11 +90,14 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   if (isAuthenticated) {
     return (
-      <>
+      <div className="flex min-h-screen bg-[#F2EFED]">
         <AdminNav />
-        {children}
+        {/* Sidebar spacer: 230px on desktop, 56px (top bar) on mobile */}
+        <main className="flex-1 min-w-0 md:ml-[230px] pt-14 md:pt-0 overflow-x-hidden">
+          {children}
+        </main>
         {trialExpired && <TrialExpiredModal />}
-      </>
+      </div>
     );
   }
 
