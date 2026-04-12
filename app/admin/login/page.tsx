@@ -41,7 +41,11 @@ export default function AdminLoginPage() {
           password,
         });
         if (result.success) {
-          router.push('/admin/dashboard');
+          if (result.mustChangePassword) {
+            router.push('/admin/settings?mustChangePassword=1');
+          } else {
+            router.push('/admin/dashboard');
+          }
         } else {
           setError(result.message || 'Ungültige Anmeldedaten');
         }

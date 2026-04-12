@@ -30,6 +30,7 @@ export interface LoginResponse {
 export interface TenantAdminLoginResponse {
   success: boolean;
   token: string;
+  mustChangePassword?: boolean;
   user: {
     id: string;
     email: string;
@@ -85,6 +86,7 @@ export const authApi = {
         return {
           success: true,
           token: data.token,
+          mustChangePassword: data.mustChangePassword ?? false,
           user: data.user,
           message: data.message,
         };

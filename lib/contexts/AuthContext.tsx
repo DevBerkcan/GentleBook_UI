@@ -29,7 +29,7 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<{ success: boolean; message?: string }>;
-  tenantAdminLogin: (credentials: TenantAdminLoginCredentials) => Promise<{ success: boolean; message?: string }>;
+  tenantAdminLogin: (credentials: TenantAdminLoginCredentials) => Promise<{ success: boolean; message?: string; mustChangePassword?: boolean }>;
   logout: () => Promise<void>;
   refreshEmployee: () => Promise<void>;
   hasRole: (roles: string | string[]) => boolean;
@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(normalized);
     }
 
-    return { success: result.success, message: result.message };
+    return { success: result.success, message: result.message, mustChangePassword: result.mustChangePassword };
   };
 
   const logout = async () => {

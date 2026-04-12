@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardBody, CardHeader } from '@nextui-org/card';
 import { Input, Textarea } from '@nextui-org/input';
 import { Button } from '@nextui-org/button';
-import { Settings, Save, Building2, Phone, Globe, Palette, Lock, ImageIcon, Upload, Clock } from 'lucide-react';
+import { Settings, Save, Building2, Phone, Globe, Palette, Lock, ImageIcon, Upload, Clock, AlertTriangle } from 'lucide-react';
 import api from '@/lib/api/client';
 
 const DAYS = [
@@ -47,6 +48,10 @@ interface TenantSettings {
 }
 
 export default function AdminSettingsPage() {
+  const searchParams = useSearchParams();
+  const mustChangePassword = searchParams.get('mustChangePassword') === '1';
+  const passwordSectionRef = useRef<HTMLDivElement>(null);
+
   const [settings, setSettings] = useState<TenantSettings>({
     companyName: '',
     tagline: '',
@@ -95,6 +100,14 @@ export default function AdminSettingsPage() {
     loadSettings();
     loadBusinessHours();
   }, []);
+
+  useEffect(() => {
+    if (mustChangePassword && passwordSectionRef.current) {
+      setTimeout(() => {
+        passwordSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
+    }
+  }, [mustChangePassword]);
 
   async function loadSettings() {
     try {
@@ -539,6 +552,15 @@ export default function AdminSettingsPage() {
         </form>
 
         {/* Password Change */}
+        <div ref={passwordSectionRef}>
+        {mustChangePassword && (
+          <div className="mt-4 flex items-start gap-3 bg-amber-50 border-2 border-amber-300 rounded-xl p-4 text-sm text-amber-800">
+            <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-amber-500" />
+            <span>
+              <strong>Passwort ändern erforderlich.</strong> Du hast ein vom Admin generiertes Passwort. Bitte lege jetzt ein eigenes Passwort fest.
+            </span>
+          </div>
+        )}
         <form onSubmit={handleChangePassword} className="mt-4">
           <Card>
             <CardHeader className="pb-0">
@@ -594,6 +616,7 @@ export default function AdminSettingsPage() {
             </CardBody>
           </Card>
         </form>
+        </div>
       </div>
     </div>
   );
