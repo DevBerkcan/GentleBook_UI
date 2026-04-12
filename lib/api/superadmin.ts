@@ -153,6 +153,12 @@ export const superAdminApi = {
     const { data } = await api.get('/superadmin/activity', { params: { limit } });
     return data as ActivityItem[];
   },
+
+  // ── Platform Overview (charts + health) ──────────────────────
+  async getOverview() {
+    const { data } = await api.get('/superadmin/overview');
+    return data as OverviewData;
+  },
 };
 
 // ── Extra Types ───────────────────────────────────────────────────────────────
@@ -189,6 +195,15 @@ export interface ActivityItem {
   detail: string;
   tenantId?: string;
   timestamp: string;
+}
+
+export interface OverviewData {
+  monthlyData: Array<{
+    year: number; month: number; label: string;
+    bookings: number; confirmed: number; cancelled: number; newTenants: number;
+  }>;
+  emailStats: { sent: number; failed: number; pending: number };
+  topTenants: Array<{ tenantId: string; companyName: string; slug: string; bookingCount: number }>;
 }
 
 // ── SuperAdmin Login (uses separate secret) ───────────────────

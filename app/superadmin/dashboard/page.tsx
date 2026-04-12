@@ -7,7 +7,7 @@ import {
   TrendingUp, Users, Mail, Activity, AlertTriangle, Zap, ArrowRight,
   RefreshCw, XCircle, UserPlus,
 } from 'lucide-react';
-import { superAdminApi, TenantListItem, ActivityItem } from '@/lib/api/superadmin';
+import { superAdminApi, TenantListItem, ActivityItem, OverviewData } from '@/lib/api/superadmin';
 
 interface Stats {
   totalTenants: number;
@@ -49,19 +49,22 @@ export default function SuperAdminDashboard() {
   const [stats,    setStats]    = useState<Stats | null>(null);
   const [tenants,  setTenants]  = useState<TenantListItem[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
+  const [overview, setOverview] = useState<OverviewData | null>(null);
   const [loading,  setLoading]  = useState(true);
 
   async function load() {
     setLoading(true);
     try {
-      const [s, t, a] = await Promise.all([
+      const [s, t, a, ov] = await Promise.all([
         superAdminApi.getStats(),
         superAdminApi.getTenants(1, 100),
         superAdminApi.getActivity(20),
+        superAdminApi.getOverview(),
       ]);
       setStats(s);
       setTenants(t.items);
       setActivity(a);
+      setOverview(ov);
     } catch (e) {
       console.error(e);
     }
@@ -171,6 +174,143 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* ── Charts ─────────────────────────────────────────────────────────── */}
+      {!loading && overview && (() => {
+        const maxBookings  = Math.max(...overview.monthlyData.map(m => m.bookings), 1);
+        const maxTenants   = Math.max(...overview.monthlyData.map(m => m.newTenants), 1);
+        const emailTotal   = overview.emailStats.sent + overview.emailStats.failed;
+        const emailRate    = emailTotal > 0 ? Math.round((overview.emailStats.sent / emailTotal) * 100) : 100;
+
+        return (
+          <div className="space-y-4">
+            {/* Bar charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* Buchungen Chart */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 className="font-semibold text-gray-900 text-sm flex items-center gap-2 mb-4">
+                  <Calendar size={16} className="text-blue-400" />
+                  Buchungen – letzte 6 Monate
+                </h2>
+                <div className="flex items-end justify-between gap-2 h-24">
+                  {overview.monthlyData.map((m, i) => {
+                    const h = Math.max(4, Math.round((m.bookings / maxBookings) * 80));
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <span className="text-[10px] font-semibold text-gray-500">{m.bookings || ''}</span>
+                        <div
+                          className="w-full rounded-t-md bg-blue-500 transition-all"
+                          style={{ height: `${h}px` }}
+                          title={`${m.bookings} Buchungen`}
+                        />
+                        <span className="text-[9px] text-gray-400 truncate w-full text-center">{m.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-400 mt-3">
+                  Gesamt: <span className="font-semibold text-gray-700">{overview.monthlyData.reduce((s, m) => s + m.bookings, 0)}</span> Buchungen in 6 Monaten
+                </p>
+              </div>
+
+              {/* Neue Systeme Chart */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 className="font-semibold text-gray-900 text-sm flex items-center gap-2 mb-4">
+                  <Building2 size={16} className="text-teal-400" />
+                  Neue Systeme – letzte 6 Monate
+                </h2>
+                <div className="flex items-end justify-between gap-2 h-24">
+                  {overview.monthlyData.map((m, i) => {
+                    const h = Math.max(4, Math.round((m.newTenants / maxTenants) * 80));
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <span className="text-[10px] font-semibold text-gray-500">{m.newTenants || ''}</span>
+                        <div
+                          className="w-full rounded-t-md bg-teal-500 transition-all"
+                          style={{ height: `${h}px` }}
+                          title={`${m.newTenants} neue Systeme`}
+                        />
+                        <span className="text-[9px] text-gray-400 truncate w-full text-center">{m.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-400 mt-3">
+                  Gesamt: <span className="font-semibold text-gray-700">{overview.monthlyData.reduce((s, m) => s + m.newTenants, 0)}</span> neue Systeme in 6 Monaten
+                </p>
+              </div>
+            </div>
+
+            {/* Email Health + Top Tenants */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* E-Mail Gesundheit */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 className="font-semibold text-gray-900 text-sm flex items-center gap-2 mb-4">
+                  <Mail size={16} className="text-purple-400" />
+                  E-Mail Gesundheit
+                </h2>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`text-3xl font-bold ${emailRate >= 95 ? 'text-green-600' : emailRate >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {emailRate}%
+                  </span>
+                  <span className="text-sm text-gray-400">Erfolgsrate</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2 mb-3">
+                  <div
+                    className={`h-2 rounded-full transition-all ${emailRate >= 95 ? 'bg-green-500' : emailRate >= 80 ? 'bg-amber-400' : 'bg-red-500'}`}
+                    style={{ width: `${emailRate}%` }}
+                  />
+                </div>
+                <div className="flex gap-4 text-xs text-gray-500">
+                  <span><span className="font-semibold text-gray-700">{overview.emailStats.sent.toLocaleString('de-DE')}</span> Gesendet</span>
+                  <span><span className="font-semibold text-red-500">{overview.emailStats.failed.toLocaleString('de-DE')}</span> Fehler</span>
+                  {overview.emailStats.pending > 0 && (
+                    <span><span className="font-semibold text-amber-500">{overview.emailStats.pending}</span> Ausstehend</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Top Systeme */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <h2 className="font-semibold text-gray-900 text-sm flex items-center gap-2 mb-4">
+                  <TrendingUp size={16} className="text-amber-400" />
+                  Top Systeme nach Buchungen
+                </h2>
+                {overview.topTenants.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">Noch keine Daten</p>
+                ) : (
+                  <div className="space-y-2">
+                    {overview.topTenants.map((t, i) => {
+                      const maxCount = overview.topTenants[0]?.bookingCount ?? 1;
+                      const pct = Math.round((t.bookingCount / maxCount) * 100);
+                      return (
+                        <Link
+                          key={t.tenantId}
+                          href={`/superadmin/tenants/${t.tenantId}`}
+                          className="flex items-center gap-3 group hover:bg-gray-50 rounded-lg px-1 py-1 transition-colors"
+                        >
+                          <span className="text-xs font-bold text-gray-300 w-4">{i + 1}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <p className="text-sm font-medium text-gray-800 truncate group-hover:text-blue-600 transition-colors">{t.companyName}</p>
+                              <span className="text-xs font-semibold text-gray-500 ml-2 flex-shrink-0">{t.bookingCount}</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-1.5">
+                              <div className="h-1.5 rounded-full bg-amber-400" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Main Grid ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
