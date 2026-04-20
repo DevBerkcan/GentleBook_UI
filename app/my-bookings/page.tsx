@@ -216,14 +216,7 @@ export default function MyBookingsPage() {
                         <div>
                           <div className="text-sm text-[#8A8A8A] mb-1">Preis</div>
                           <div className="font-semibold text-[#E8C7C3]">
-                            ab {booking.booking.price.toFixed(2)} CHF
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-sm text-[#8A8A8A] mb-1">Standort</div>
-                          <div className="font-semibold text-[#1E1E1E]">
-                            Elisabethenstrasse 41, Basel
+                            ab {booking.booking.price.toFixed(2)} {booking.booking.currency ?? 'CHF'}
                           </div>
                         </div>
                       </div>

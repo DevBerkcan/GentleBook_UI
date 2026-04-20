@@ -167,30 +167,42 @@ export default function TenantBookingPage() {
 
       <div className="max-w-3xl mx-auto px-4 py-8 sm:py-10">
         {/* Step indicators */}
-        <div className="mb-8 flex justify-center items-center gap-2 sm:gap-4">
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((step) => (
-            <div key={step} className="flex items-center">
-              <div
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
-                  currentStep > step
-                    ? "text-white"
-                    : currentStep === step
-                    ? "text-white ring-4 ring-opacity-20"
-                    : "bg-[#F0E6E4] text-[#8A8A8A]"
-                }`}
-                style={currentStep >= step ? { backgroundColor: primaryColor } : {}}
-              >
-                {currentStep > step ? <Check size={18} /> : step}
-              </div>
-              {step < TOTAL_STEPS && (
-                <div
-                  className="w-8 sm:w-12 h-1 mx-1 sm:mx-2 rounded transition-all"
-                  style={{ backgroundColor: currentStep > step ? primaryColor : '#F0E6E4' }}
-                />
-              )}
+        {(() => {
+          const stepLabels = ['Service', 'Mitarbeiter', 'Datum & Zeit', 'Kontakt'];
+          return (
+            <div className="mb-8 flex justify-center items-start gap-2 sm:gap-3">
+              {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((step) => (
+                <div key={step} className="flex items-start">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+                        currentStep > step
+                          ? "text-white"
+                          : currentStep === step
+                          ? "text-white ring-4 ring-opacity-20"
+                          : "bg-[#F0E6E4] text-[#8A8A8A]"
+                      }`}
+                      style={currentStep >= step ? { backgroundColor: primaryColor } : {}}
+                    >
+                      {currentStep > step ? <Check size={18} /> : step}
+                    </div>
+                    <p className={`text-[10px] sm:text-xs font-medium text-center leading-tight transition-colors ${
+                      currentStep === step ? 'text-gray-700' : currentStep > step ? 'text-gray-400' : 'text-gray-300'
+                    }`}>
+                      {stepLabels[step - 1]}
+                    </p>
+                  </div>
+                  {step < TOTAL_STEPS && (
+                    <div
+                      className="w-6 sm:w-10 h-1 mx-1 sm:mx-2 rounded transition-all mt-4 sm:mt-[18px] flex-shrink-0"
+                      style={{ backgroundColor: currentStep > step ? primaryColor : '#F0E6E4' }}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
 
         <AnimatePresence>
           {error && (

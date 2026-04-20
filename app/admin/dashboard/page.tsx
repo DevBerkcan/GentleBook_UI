@@ -8,6 +8,7 @@ import {
   Euro, Copy, Check, ExternalLink, Sparkles,
   ArrowUpRight, ChevronRight, CheckCircle2, Circle, X,
 } from "lucide-react";
+import Link from "next/link";
 import { getDashboard, getOnboardingStatus, type DashboardOverview, type OnboardingStatus } from "@/lib/api/admin";
 import { formatPrice } from "@/lib/utils/currency";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -293,6 +294,33 @@ export default function AdminDashboardPage() {
             growth={null}
             accent="#8B5CF6"
           />
+        </motion.div>
+
+        {/* ── Quick Actions ────────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+          className="flex flex-wrap gap-2"
+        >
+          <Link href="/admin/bookings?new=1"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm hover:opacity-90 active:scale-[0.97] transition-all"
+            style={{ background: "linear-gradient(135deg, #017172, #01a0a2)" }}
+          >
+            <Calendar size={15} /> Neue Buchung
+          </Link>
+          <Link href="/admin/bookings"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-[#1E1E1E] border border-gray-100 shadow-sm hover:bg-gray-50 active:scale-[0.97] transition-all"
+          >
+            <Clock size={15} className="text-[#017172]" />
+            Buchungen heute
+            {today.totalBookings > 0 && (
+              <span className="bg-[#017172] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{today.totalBookings}</span>
+            )}
+          </Link>
+          <Link href="/admin/customers"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white text-[#1E1E1E] border border-gray-100 shadow-sm hover:bg-gray-50 active:scale-[0.97] transition-all"
+          >
+            <Users size={15} className="text-purple-500" /> Kunden
+          </Link>
         </motion.div>
 
         {/* ── Main Grid ────────────────────────────────────────────── */}

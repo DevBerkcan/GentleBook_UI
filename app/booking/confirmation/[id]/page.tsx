@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle, Calendar, Sparkles, Mail, User, ArrowLeft, PartyPopper } from "lucide-react";
+import { CheckCircle, Calendar, Sparkles, Mail, User, ArrowLeft, PartyPopper, Copy, Check as CheckIcon, Download } from "lucide-react";
 import Link from "next/link";
 
 interface BookingDetails {
@@ -58,6 +58,7 @@ export default function ConfirmationPage({ params }: { params: { id: string } })
   const [booking,    setBooking]    = useState<BookingDetails | null>(null);
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [loading,    setLoading]    = useState(true);
+  const [copied,     setCopied]     = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -78,6 +79,45 @@ export default function ConfirmationPage({ params }: { params: { id: string } })
 
   const primary   = tenantInfo?.primaryColor ?? "#E8C7C3";
   const lightBg   = lighten(primary, 0.88);
+
+  function copyBookingNumber() {
+    if (!booking) return;
+    navigator.clipboard.writeText(booking.bookingNumber).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  function buildGoogleCalendarUrl() {
+    if (!booking) return '#';
+    const date = booking.booking.bookingDate.replace(/-/g, '');
+    const start = `${date}T${booking.booking.startTime.replace(':', '')}00`;
+    const end   = `${date}T${booking.booking.endTime.replace(':', '')}00`;
+    const title = encodeURIComponent(`${booking.booking.serviceName}${name ? ` bei ${name}` : ''}`);
+    const details = encodeURIComponent(`Buchungs-Nr: ${booking.bookingNumber}`);
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
+  }
+
+  function downloadIcal() {
+    if (!booking) return;
+    const date = booking.booking.bookingDate.replace(/-/g, '');
+    const start = `${date}T${booking.booking.startTime.replace(':', '')}00`;
+    const end   = `${date}T${booking.booking.endTime.replace(':', '')}00`;
+    const title = `${booking.booking.serviceName}${name ? ` bei ${name}` : ''}`;
+    const ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+      `DTSTART:${start}`, `DTEND:${end}`,
+      `SUMMARY:${title}`,
+      `DESCRIPTION:Buchungs-Nr: ${booking.bookingNumber}`,
+      `UID:${booking.id}@gentlebook`,
+      'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `termin-${booking.bookingNumber}.ics`;
+    a.click(); URL.revokeObjectURL(url);
+  }
   const logoSrc   = tenantInfo?.logoUrl
     ? (tenantInfo.logoUrl.startsWith("http") ? tenantInfo.logoUrl : `${API_URL}${tenantInfo.logoUrl}`)
     : null;
@@ -167,7 +207,15 @@ export default function ConfirmationPage({ params }: { params: { id: string } })
                   <PartyPopper size={18} className="opacity-80 scale-x-[-1]" />
                 </div>
                 {name && <p className="text-white/75 text-sm mt-1">bei {name}</p>}
-                <p className="text-white/60 text-xs mt-2">#{booking.bookingNumber}</p>
+                <button
+                  onClick={copyBookingNumber}
+                  className="inline-flex items-center gap-1.5 text-white/60 text-xs mt-2 hover:text-white/90 transition-colors group"
+                >
+                  #{booking.bookingNumber}
+                  {copied
+                    ? <CheckIcon size={11} className="text-green-300" />
+                    : <Copy size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
+                </button>
               </motion.div>
             </div>
 
@@ -223,6 +271,26 @@ export default function ConfirmationPage({ params }: { params: { id: string } })
                 <p className="text-sm text-gray-600">
                   Eine Bestätigung wurde an <strong className="text-gray-800">{booking.customer.email}</strong> gesendet.
                 </p>
+              </motion.div>
+
+              {/* Add to calendar */}
+              <motion.div variants={slideUp} className="flex gap-2 pt-1">
+                <a
+                  href={buildGoogleCalendarUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
+                  style={{ borderColor: withAlpha(primary, 0.35), color: primary, background: withAlpha(primary, 0.06) }}
+                >
+                  <Calendar size={14} /> Google Kalender
+                </a>
+                <button
+                  onClick={downloadIcal}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
+                  style={{ borderColor: withAlpha(primary, 0.35), color: primary, background: withAlpha(primary, 0.06) }}
+                >
+                  <Download size={14} /> iCal / Outlook
+                </button>
               </motion.div>
             </div>
           </motion.div>

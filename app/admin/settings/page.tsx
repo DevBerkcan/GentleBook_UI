@@ -456,12 +456,30 @@ export default function AdminSettingsPage() {
                   placeholder="EUR"
                   maxLength={3}
                 />
-                <Input
-                  label="Zeitzone"
-                  value={settings.timeZone}
-                  onChange={(e) => set('timeZone', e.target.value)}
-                  placeholder="Europe/Berlin"
-                />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-[#1E1E1E]">Zeitzone</label>
+                  <select
+                    value={settings.timeZone}
+                    onChange={(e) => set('timeZone', e.target.value)}
+                    className="w-full rounded-xl border border-[#E8E8E8] bg-white px-3 py-2 text-sm text-[#1E1E1E] outline-none focus:border-[#017172] transition-colors"
+                  >
+                    <option value="Europe/Berlin">Europe/Berlin (MEZ/MESZ)</option>
+                    <option value="Europe/Zurich">Europe/Zurich (MEZ/MESZ)</option>
+                    <option value="Europe/Vienna">Europe/Vienna (MEZ/MESZ)</option>
+                    <option value="Europe/London">Europe/London (GMT/BST)</option>
+                    <option value="Europe/Paris">Europe/Paris (MEZ/MESZ)</option>
+                    <option value="Europe/Amsterdam">Europe/Amsterdam (MEZ/MESZ)</option>
+                    <option value="Europe/Brussels">Europe/Brussels (MEZ/MESZ)</option>
+                    <option value="Europe/Rome">Europe/Rome (MEZ/MESZ)</option>
+                    <option value="Europe/Madrid">Europe/Madrid (MEZ/MESZ)</option>
+                    <option value="Europe/Warsaw">Europe/Warsaw (MEZ/MESZ)</option>
+                    <option value="UTC">UTC</option>
+                    <option value="America/New_York">America/New_York (ET)</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
+                    <option value="Asia/Dubai">Asia/Dubai (GST)</option>
+                    <option value="Asia/Istanbul">Asia/Istanbul (TRT)</option>
+                  </select>
+                </div>
               </div>
             </CardBody>
           </Card>
