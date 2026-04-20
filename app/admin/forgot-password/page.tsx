@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
     setErrMsg('');
 
     try {
-      const res = await fetch(`${API}/api/auth/forgot-password`, {
+      const res = await fetch(`${API}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantSlug: tenantSlug.trim().toLowerCase(), email: email.trim().toLowerCase() }),
