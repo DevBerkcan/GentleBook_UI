@@ -120,12 +120,17 @@ export const adminApi = {
 
   async getLoyaltySettings() {
     const { data } = await api.get('/tenant/loyalty');
-    return data as { pointsPerBooking: number };
+    return data as LoyaltySettings;
   },
 
-  async updateLoyaltySettings(pointsPerBooking: number) {
-    const { data } = await api.put('/tenant/loyalty', { pointsPerBooking });
-    return data as { pointsPerBooking: number };
+  async updateLoyaltySettings(settings: LoyaltySettings) {
+    const { data } = await api.put('/tenant/loyalty', {
+      pointsPerBooking: settings.pointsPerBooking,
+      rewardEveryNVisits: settings.rewardEveryNVisits,
+      rewardType: settings.rewardType,
+      rewardValue: settings.rewardValue,
+    });
+    return data as LoyaltySettings;
   },
 
   async getCustomerLoyalty(customerId: string) {
@@ -143,7 +148,7 @@ export const adminApi = {
     return data as AdminVoucher[];
   },
 
-  async issueVoucher(dto: { type: 'MonetaryValue' | 'SessionPackage'; customerId?: string | null; amount?: number | null; sessions?: number | null; expiresAt?: string | null; note?: string | null }) {
+  async issueVoucher(dto: { type: 'MonetaryValue' | 'SessionPackage' | 'PercentageDiscount'; customerId?: string | null; amount?: number | null; sessions?: number | null; percentageValue?: number | null; expiresAt?: string | null; note?: string | null }) {
     const { data } = await api.post('/admin/vouchers', dto);
     return data as AdminVoucher;
   },
@@ -158,12 +163,12 @@ export const adminApi = {
     return data as IntakeFormField[];
   },
 
-  async createIntakeFormField(field: { label: string; fieldType: string; optionsJson?: string | null; isRequired: boolean }) {
+  async createIntakeFormField(field: IntakeFormFieldRequest) {
     const { data } = await api.post('/admin/intake-form/fields', field);
     return data as IntakeFormField;
   },
 
-  async updateIntakeFormField(id: string, field: { label: string; fieldType: string; optionsJson?: string | null; isRequired: boolean; isActive?: boolean }) {
+  async updateIntakeFormField(id: string, field: IntakeFormFieldRequest) {
     const { data } = await api.put(`/admin/intake-form/fields/${id}`, field);
     return data as IntakeFormField;
   },
@@ -174,6 +179,18 @@ export const adminApi = {
 
   async reorderIntakeFormFields(orderedIds: string[]) {
     await api.patch('/admin/intake-form/fields/reorder', orderedIds);
+  },
+
+  async getIntakeFormTemplates() {
+    const { data } = await api.get('/admin/intake-form/fields/templates');
+    return data as { key: string; label: string; fieldCount: number }[];
+  },
+
+  async applyIntakeFormTemplate(key: string, categoryId?: string | null) {
+    const { data } = await api.post(`/admin/intake-form/fields/templates/${key}/apply`, null, {
+      params: categoryId ? { categoryId } : undefined,
+    });
+    return data as IntakeFormField[];
   },
 
   async getIntakeFormResponseForBooking(bookingId: string) {
@@ -201,26 +218,54 @@ export interface TenantDomainInfo {
 export interface AdminVoucher {
   id: string;
   code: string;
-  type: 'MonetaryValue' | 'SessionPackage';
+  type: 'MonetaryValue' | 'SessionPackage' | 'PercentageDiscount';
   status: 'Active' | 'Redeemed' | 'Expired' | 'Cancelled';
   initialAmount: number | null;
   remainingAmount: number | null;
   initialSessions: number | null;
   remainingSessions: number | null;
+  percentageValue: number | null;
   expiresAt: string | null;
   issuedAt: string;
   note: string | null;
   customerName: string | null;
 }
 
+export type IntakeFormFieldType = 'Text' | 'Textarea' | 'YesNo' | 'MultipleChoice' | 'Checkboxes' | 'Date';
+export type IntakeFormType = 'Anamnese' | 'Einverstaendnis' | 'Fragebogen' | 'Nachsorge';
+
 export interface IntakeFormField {
   id: string;
   label: string;
-  fieldType: 'Text' | 'Textarea' | 'YesNo' | 'MultipleChoice';
+  fieldType: IntakeFormFieldType;
+  formType: IntakeFormType;
   optionsJson: string | null;
+  categoryId: string | null;
+  categoryName?: string | null;
+  conditionalOnFieldId: string | null;
+  conditionalOnValue: string | null;
   isRequired: boolean;
   isActive: boolean;
   displayOrder: number;
+}
+
+export interface IntakeFormFieldRequest {
+  label: string;
+  fieldType: string;
+  formType?: string;
+  optionsJson?: string | null;
+  categoryId?: string | null;
+  conditionalOnFieldId?: string | null;
+  conditionalOnValue?: string | null;
+  isRequired: boolean;
+  isActive?: boolean;
+}
+
+export interface LoyaltySettings {
+  pointsPerBooking: number;
+  rewardEveryNVisits: number;
+  rewardType: 'MonetaryValue' | 'PercentageDiscount' | 'SessionPackage';
+  rewardValue: number | null;
 }
 
 export interface LoyaltyTransaction {

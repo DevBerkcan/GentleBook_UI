@@ -24,7 +24,7 @@ export function IntakeFormAnswersPanel({ bookingId }: { bookingId: string }) {
   if (loading) {
     return (
       <div className="bg-[#F6F5FA] rounded-xl p-4 border border-[#ECEBF2]/20 flex items-center gap-2 text-xs text-[#8A8A8A]">
-        <Loader2 size={13} className="animate-spin" /> Lade Anamnese…
+        <Loader2 size={13} className="animate-spin" /> Lade Formular…
       </div>
     );
   }
@@ -34,7 +34,7 @@ export function IntakeFormAnswersPanel({ bookingId }: { bookingId: string }) {
   return (
     <div className="bg-[#F6F5FA] rounded-xl p-4 border border-[#ECEBF2]/20">
       <h3 className="font-semibold text-[#1E1E1E] text-sm mb-3 flex items-center gap-1.5">
-        <ClipboardList size={14} className="text-[#6355E4]" /> Anamnesebogen
+        <ClipboardList size={14} className="text-[#6355E4]" /> Formular
       </h3>
       <div className="space-y-2">
         {answers.map((a, i) => (

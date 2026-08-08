@@ -25,9 +25,11 @@ export default function AdminVouchersPage() {
   const [search, setSearch] = useState("");
 
   const [showIssueForm, setShowIssueForm] = useState(false);
-  const [issueType, setIssueType] = useState<"MonetaryValue" | "SessionPackage">("MonetaryValue");
+  const [issueType, setIssueType] = useState<"MonetaryValue" | "SessionPackage" | "PercentageDiscount">("MonetaryValue");
   const [amount, setAmount] = useState("");
   const [sessions, setSessions] = useState("");
+  const [percentageValue, setPercentageValue] = useState("");
+  const [percentageUses, setPercentageUses] = useState("1");
   const [note, setNote] = useState("");
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<CustomerListItem[]>([]);
@@ -73,17 +75,21 @@ export default function AdminVouchersPage() {
     if (issueType === "SessionPackage" && (!sessions || parseInt(sessions, 10) <= 0)) {
       setIssueError("Bitte eine gültige Anzahl Sitzungen angeben."); return;
     }
+    if (issueType === "PercentageDiscount" && (!percentageValue || parseFloat(percentageValue) <= 0 || parseFloat(percentageValue) > 100)) {
+      setIssueError("Bitte einen gültigen Prozentsatz (1-100) angeben."); return;
+    }
     setIssuing(true);
     try {
       await adminApi.issueVoucher({
         type: issueType,
         customerId: selectedCustomer?.id ?? null,
         amount: issueType === "MonetaryValue" ? parseFloat(amount) : null,
-        sessions: issueType === "SessionPackage" ? parseInt(sessions, 10) : null,
+        sessions: issueType === "SessionPackage" ? parseInt(sessions, 10) : issueType === "PercentageDiscount" ? (parseInt(percentageUses, 10) || 1) : null,
+        percentageValue: issueType === "PercentageDiscount" ? parseFloat(percentageValue) : null,
         note: note.trim() || null,
       });
       setShowIssueForm(false);
-      setAmount(""); setSessions(""); setNote(""); setSelectedCustomer(null); setCustomerQuery("");
+      setAmount(""); setSessions(""); setPercentageValue(""); setPercentageUses("1"); setNote(""); setSelectedCustomer(null); setCustomerQuery("");
       await load();
     } catch (err: any) {
       setIssueError(err.response?.data?.message ?? "Ausstellung fehlgeschlagen.");
@@ -181,15 +187,28 @@ export default function AdminVouchersPage() {
               <select value={issueType} onChange={(e) => setIssueType(e.target.value as any)} className={inputCls}>
                 <option value="MonetaryValue">Geldwert-Gutschein</option>
                 <option value="SessionPackage">10er-Karte (Sitzungspaket)</option>
+                <option value="PercentageDiscount">Prozent-Rabatt</option>
               </select>
-              {issueType === "MonetaryValue" ? (
+              {issueType === "MonetaryValue" && (
                 <input type="number" min={0.01} step={0.01} value={amount} onChange={(e) => setAmount(e.target.value)}
                   placeholder="Betrag" className={inputCls} />
-              ) : (
+              )}
+              {issueType === "SessionPackage" && (
                 <input type="number" min={1} value={sessions} onChange={(e) => setSessions(e.target.value)}
                   placeholder="Anzahl Sitzungen" className={inputCls} />
               )}
+              {issueType === "PercentageDiscount" && (
+                <input type="number" min={1} max={100} value={percentageValue} onChange={(e) => setPercentageValue(e.target.value)}
+                  placeholder="% Rabatt" className={inputCls} />
+              )}
             </div>
+            {issueType === "PercentageDiscount" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-[#6B7280]">Anzahl Nutzungen</label>
+                <input type="number" min={1} value={percentageUses} onChange={(e) => setPercentageUses(e.target.value)}
+                  className={`${inputCls} max-w-[120px]`} />
+              </div>
+            )}
 
             <div className="relative">
               <input
@@ -266,6 +285,8 @@ export default function AdminVouchersPage() {
                       <p className="text-xs text-[#9CA3AF]">
                         {v.customerName ?? "Kein Kunde zugeordnet"} · {v.type === "MonetaryValue"
                           ? `${v.remainingAmount?.toFixed(2)} / ${v.initialAmount?.toFixed(2)} übrig`
+                          : v.type === "PercentageDiscount"
+                          ? `${v.percentageValue}% Rabatt · ${v.remainingSessions} / ${v.initialSessions} Nutzungen übrig`
                           : `${v.remainingSessions} / ${v.initialSessions} Sitzungen übrig`}
                       </p>
                     </div>

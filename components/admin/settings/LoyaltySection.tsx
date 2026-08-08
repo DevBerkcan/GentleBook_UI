@@ -1,17 +1,24 @@
 // components/admin/settings/LoyaltySection.tsx
-// "Treuepunkte" section for /admin/settings (Agency-exklusiv). 0 = Feature deaktiviert.
+// "Treuepunkte" + "Stammkunden-Belohnung" section for /admin/settings (Agency-exklusiv). 0 =
+// jeweiliges Feature deaktiviert.
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Gift, Loader2, Lock } from "lucide-react";
-import { adminApi } from "@/lib/api/admin";
+import { Gift, Loader2, Lock, Award } from "lucide-react";
+import { adminApi, type LoyaltySettings } from "@/lib/api/admin";
 
 const inputCls =
   "w-full border border-[#E5E7EB] bg-white rounded-xl px-3 py-2.5 text-sm text-[#111318] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#6355E4]/25 focus:border-[#A5B4FC] transition-all";
 
+const REWARD_TYPE_LABEL: Record<LoyaltySettings["rewardType"], string> = {
+  MonetaryValue: "Geldwert-Gutschein",
+  PercentageDiscount: "Prozent-Rabatt",
+  SessionPackage: "Freie Sitzung(en)",
+};
+
 export function LoyaltySection() {
   const [loading, setLoading] = useState(true);
-  const [points, setPoints] = useState(0);
+  const [settings, setSettings] = useState<LoyaltySettings>({ pointsPerBooking: 0, rewardEveryNVisits: 0, rewardType: "MonetaryValue", rewardValue: null });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -21,7 +28,7 @@ export function LoyaltySection() {
     setLoading(true);
     try {
       const data = await adminApi.getLoyaltySettings();
-      setPoints(data.pointsPerBooking);
+      setSettings(data);
     } catch (err: any) {
       if (err?.response?.status === 402 && err.response?.data?.feature === "loyalty_points") {
         setLocked({ message: err.response.data.message, currentPlan: err.response.data.currentPlan, requiredPlan: err.response.data.requiredPlan });
@@ -38,10 +45,11 @@ export function LoyaltySection() {
     setSuccess(null);
     setSaving(true);
     try {
-      await adminApi.updateLoyaltySettings(points);
+      const saved = await adminApi.updateLoyaltySettings(settings);
+      setSettings(saved);
       setSuccess("Gespeichert.");
-    } catch {
-      setError("Die Einstellung konnte nicht gespeichert werden.");
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? "Die Einstellung konnte nicht gespeichert werden.");
     } finally {
       setSaving(false);
     }
@@ -96,13 +104,61 @@ export function LoyaltySection() {
           <input
             type="number"
             min={0}
-            value={points}
-            onChange={(e) => setPoints(Math.max(0, parseInt(e.target.value, 10) || 0))}
+            value={settings.pointsPerBooking}
+            onChange={(e) => setSettings((s) => ({ ...s, pointsPerBooking: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
             className={inputCls}
             disabled={saving}
           />
           <p className="text-[11px] text-[#9CA3AF]">0 = Treuepunkte-Programm deaktiviert</p>
         </div>
+      </div>
+
+      <div className="flex items-center gap-3 px-1 pb-4 pt-6 mt-2 border-t border-[#F3F4F6]">
+        <div className="w-8 h-8 bg-[#059669] rounded-xl flex items-center justify-center shrink-0">
+          <Award size={15} className="text-white" />
+        </div>
+        <div>
+          <p className="font-semibold text-[#111318] text-sm leading-tight">Stammkunden-Belohnung</p>
+          <p className="text-[11px] text-[#9CA3AF] leading-tight mt-0.5">Automatischer Gutschein, sobald ein Kunde eine bestimmte Besuchsanzahl erreicht</p>
+        </div>
+      </div>
+
+      <div className="px-1 space-y-4">
+        <div className="flex flex-col gap-1.5 max-w-xs">
+          <label className="text-xs font-semibold text-[#6B7280]">Belohnung alle X Besuche</label>
+          <input
+            type="number"
+            min={0}
+            value={settings.rewardEveryNVisits}
+            onChange={(e) => setSettings((s) => ({ ...s, rewardEveryNVisits: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
+            className={inputCls}
+            disabled={saving}
+          />
+          <p className="text-[11px] text-[#9CA3AF]">0 = deaktiviert. Z. B. 10 = bei jedem 10., 20., 30. Besuch usw.</p>
+        </div>
+
+        {settings.rewardEveryNVisits > 0 && (
+          <div className="flex gap-2 max-w-sm">
+            <select
+              value={settings.rewardType}
+              onChange={(e) => setSettings((s) => ({ ...s, rewardType: e.target.value as LoyaltySettings["rewardType"] }))}
+              className={inputCls}
+              disabled={saving}
+            >
+              {Object.entries(REWARD_TYPE_LABEL).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <input
+              type="number"
+              min={0}
+              step={settings.rewardType === "PercentageDiscount" ? 1 : 0.01}
+              value={settings.rewardValue ?? ""}
+              onChange={(e) => setSettings((s) => ({ ...s, rewardValue: e.target.value ? parseFloat(e.target.value) : null }))}
+              placeholder={settings.rewardType === "PercentageDiscount" ? "%" : settings.rewardType === "SessionPackage" ? "Sitzungen" : "Betrag"}
+              className={inputCls}
+              disabled={saving}
+            />
+          </div>
+        )}
 
         {error && <p className="text-xs text-[#991B1B] bg-[#FEE2E2] border border-[#FECACA] rounded-lg px-3 py-2">{error}</p>}
         {success && !error && <p className="text-xs text-[#065F46] bg-[#D1FAE5] border border-[#A7F3D0] rounded-lg px-3 py-2">{success}</p>}

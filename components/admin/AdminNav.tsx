@@ -28,6 +28,7 @@ export function AdminNav() {
   const { t, lang, setLang } = useTranslation();
   const [logoUrl, setLogoUrl]         = useState<string | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
+  const [industryType, setIndustryType] = useState<string | null>(null);
 
   useEffect(() => {
     if (isTenantAdmin) {
@@ -35,9 +36,15 @@ export function AdminNav() {
         const d = res.data?.data ?? res.data;
         if (d?.logoUrl)     setLogoUrl(d.logoUrl);
         if (d?.companyName) setCompanyName(d.companyName);
+        if (d?.industryType) setIndustryType(d.industryType);
       }).catch(() => {});
     }
   }, [isTenantAdmin]);
+
+  // Mirrors Configuration/IntakeFormIndustryGate.cs — "Formulare" only makes sense for
+  // industries that actually do a consultation before treatment.
+  const INTAKE_FORM_INDUSTRIES = ["Beauty", "Hairdresser", "Nail", "Barbershop", "Tattoo", "Massage"];
+  const showIntakeForm = industryType == null || INTAKE_FORM_INDUSTRIES.includes(industryType);
 
   useEffect(() => {
     setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "true");
@@ -107,7 +114,7 @@ export function AdminNav() {
       { href: "/admin/inbox",        label: t.admin.inbox,        icon: Inbox },
         { href: "/admin/ai-service-finder", label: "KI & Service Finder", icon: Bot },
       { href: "/admin/links",        label: t.admin.myLinks,      icon: Link2 },
-      { href: "/admin/intake-form",  label: "Anamneseformular",   icon: IntakeIcon },
+      ...(showIntakeForm ? [{ href: "/admin/intake-form", label: "Formulare", icon: IntakeIcon }] : []),
       { href: "/admin/settings",     label: t.admin.settings,     icon: Settings },
       { href: "/admin/api-keys",     label: "API-Zugang",         icon: KeyRound },
       { href: "/admin/subscription", label: t.admin.subscription, icon: CreditCard },

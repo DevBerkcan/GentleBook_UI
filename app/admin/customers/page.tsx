@@ -35,7 +35,9 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { customersApi, CustomerListItem, CustomerDetail } from "@/lib/api/customers";
+import { adminApi } from "@/lib/api/admin";
 import { CustomerLoyaltyPanel } from "@/components/admin/customers/CustomerLoyaltyPanel";
+import { CustomerLoyaltyCardModal } from "@/components/admin/customers/CustomerLoyaltyCardModal";
 import { useConfirm } from "@/components/ConfirmDialog";
 import moment from "moment";
 import { formatPrice } from "@/lib/utils/currency";
@@ -70,6 +72,14 @@ export default function CustomersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [deleteReason, setDeleteReason] = useState("");
+  const [regularCustomerThreshold, setRegularCustomerThreshold] = useState<number | null>(null);
+  const [showLoyaltyCard, setShowLoyaltyCard] = useState(false);
+
+  useEffect(() => {
+    adminApi.getLoyaltySettings()
+      .then((s) => setRegularCustomerThreshold(s.rewardEveryNVisits > 0 ? s.rewardEveryNVisits : null))
+      .catch(() => {});
+  }, []);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onClose: onDeleteModalClose } = useDisclosure();
@@ -251,7 +261,12 @@ export default function CustomersPage() {
             {customer.fullName.charAt(0)}
           </div>
           <div>
-            <div className="font-semibold text-[#1E1E1E] text-base">{customer.fullName}</div>
+            <div className="font-semibold text-[#1E1E1E] text-base flex items-center gap-1.5">
+              {customer.fullName}
+              {regularCustomerThreshold != null && customer.totalBookings >= regularCustomerThreshold && (
+                <span title="Stammkunde">🎉</span>
+              )}
+            </div>
             <div className="text-xs text-[#8A8A8A] mt-0.5">ID: {customer.id.slice(-8)}</div>
           </div>
         </div>
@@ -423,7 +438,12 @@ export default function CustomersPage() {
                                 {customer.fullName.charAt(0)}
                               </div>
                               <div>
-                                <div className="font-semibold text-[#1E1E1E] text-sm">{customer.fullName}</div>
+                                <div className="font-semibold text-[#1E1E1E] text-sm flex items-center gap-1.5">
+                                  {customer.fullName}
+                                  {regularCustomerThreshold != null && customer.totalBookings >= regularCustomerThreshold && (
+                                    <span title="Stammkunde">🎉</span>
+                                  )}
+                                </div>
                                 <div className="text-xs text-[#8A8A8A]">ID: {customer.id.slice(-8)}</div>
                               </div>
                             </div>
@@ -742,6 +762,17 @@ export default function CustomersPage() {
                     {/* Loyalty Points (Agency) */}
                     <CustomerLoyaltyPanel customerId={selectedCustomer.id} />
 
+                    {/* Stammkunden-Kundenkarte (Agency) */}
+                    {regularCustomerThreshold != null && (
+                      <button
+                        type="button"
+                        onClick={() => setShowLoyaltyCard(true)}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-[#F6F5FA] text-[#6355E4] hover:bg-[#ECEBF2] transition-colors border border-[#ECEBF2]/40"
+                      >
+                        🎉 Kundenkarte drucken
+                      </button>
+                    )}
+
                     {/* Notes */}
                     {selectedCustomer.notes && (
                       <div className="bg-[#F6F5FA] rounded-xl p-4 border border-[#ECEBF2]/20">
@@ -936,6 +967,16 @@ export default function CustomersPage() {
       </Modal>
 
       {confirmDialog}
+
+      {selectedCustomer && regularCustomerThreshold != null && (
+        <CustomerLoyaltyCardModal
+          open={showLoyaltyCard}
+          onClose={() => setShowLoyaltyCard(false)}
+          customerName={selectedCustomer.fullName}
+          totalBookings={selectedCustomer.totalBookings}
+          threshold={regularCustomerThreshold}
+        />
+      )}
     </div>
   );
 }

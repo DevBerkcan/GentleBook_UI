@@ -291,7 +291,7 @@ export default function ConfirmationPage({ params }: { params: { id: string } })
                       <ClipboardList size={18} style={{ color: primary }} />
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-800 text-sm">Anamnesebogen ausfüllen</p>
+                      <p className="font-semibold text-gray-800 text-sm">Formular ausfüllen</p>
                       <p className="text-xs text-gray-500">Hilf uns, dich optimal vorzubereiten</p>
                     </div>
                   </Link>
