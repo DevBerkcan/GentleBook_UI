@@ -174,7 +174,7 @@ export function DateTimePicker({
               </div>
             ) : availableSlots.length === 0 ? (
               <div className="text-center py-8 rounded-xl text-[#8A8A8A] text-sm" style={{ backgroundColor: lightBg }}>
-                {noSlotsMessage ?? t.booking.noTimesAvailable}
+                {lang === "de" ? (noSlotsMessage ?? t.booking.noTimesAvailable) : t.booking.noTimesAvailable}
               </div>
             ) : (
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">

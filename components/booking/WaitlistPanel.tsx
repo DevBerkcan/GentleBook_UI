@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Bell, Check } from "lucide-react";
 import { joinWaitlist } from "@/lib/api/waitlist";
 import type { Employee, Service, TimeSlot } from "@/lib/api/booking";
+import { useTranslation } from "@/lib/i18n/LanguageContext";
 
 interface WaitlistPanelProps {
   slug: string;
@@ -36,6 +37,7 @@ export function WaitlistPanel({
   isDark,
   borderRadius,
 }: WaitlistPanelProps) {
+  const { t, lang } = useTranslation();
   const now = new Date();
   const today = now.toISOString().split("T")[0];
   const currentTime = now.toTimeString().slice(0, 5);
@@ -54,15 +56,15 @@ export function WaitlistPanel({
   const submit = async () => {
     setError(null);
     if (!form.firstName.trim() || !form.lastName.trim()) {
-      setError("Vor- und Nachname sind erforderlich.");
+      setError(t.booking.waitlistFirstLastRequired);
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      setError("Bitte geben Sie eine gültige E-Mail-Adresse ein.");
+      setError(t.booking.errorInvalidEmail);
       return;
     }
     if (mode === "exact" && !preferredTime) {
-      setError("Bitte wählen Sie eine Wunschzeit.");
+      setError(t.booking.waitlistPreferredTimeRequired);
       return;
     }
 
@@ -89,7 +91,7 @@ export function WaitlistPanel({
         "response" in requestError
           ? (requestError as { response?: { data?: { message?: string } } }).response?.data?.message
           : undefined;
-      setError(responseMessage || "Fehler beim Eintragen in die Warteliste.");
+      setError(lang === "de" ? (responseMessage || t.booking.waitlistError) : t.booking.waitlistError);
     } finally {
       setSubmitting(false);
     }
@@ -104,7 +106,7 @@ export function WaitlistPanel({
         style={{ color: primaryColor, borderColor: primaryColor, borderRadius }}
       >
         <Bell size={17} />
-        Keine passende Uhrzeit? Warteliste
+        {t.booking.waitlistOpen}
       </button>
     );
   }
@@ -125,25 +127,25 @@ export function WaitlistPanel({
             <Check size={28} style={{ color: primaryColor }} />
           </div>
           <p className={`font-bold text-lg mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-            Sie stehen auf der Warteliste!
+            {t.booking.waitlistSuccessTitle}
           </p>
           <p className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}>
-            Wird ein passender Termin frei, reservieren wir ihn 15 Minuten für Sie und senden Ihnen einen persönlichen Link.
+            {t.booking.waitlistSuccessDesc}
           </p>
         </div>
       ) : (
         <>
           <div className="mb-5">
             <h3 className={`font-bold text-base mb-1 ${isDark ? "text-white" : "text-gray-900"}`}>
-              Warteliste für {service.name}
+              {t.booking.waitlistFor} {service.name}
             </h3>
             <p className={`text-sm ${isDark ? "text-white/60" : "text-gray-500"}`}>
-              {new Date(`${date}T00:00:00`).toLocaleDateString("de-DE", {
+              {new Date(`${date}T00:00:00`).toLocaleDateString(lang === "de" ? "de-DE" : "en-GB", {
                 day: "2-digit",
                 month: "long",
                 year: "numeric",
               })}{" "}
-              bei {employee.name}
+              {t.booking.waitlistAt} {employee.name}
             </p>
           </div>
 
@@ -159,7 +161,7 @@ export function WaitlistPanel({
                 color: isDark ? "white" : "#374151",
               }}
             >
-              Beliebige Uhrzeit
+              {t.booking.waitlistAnyTime}
             </button>
             <button
               type="button"
@@ -173,13 +175,13 @@ export function WaitlistPanel({
                 color: isDark ? "white" : "#374151",
               }}
             >
-              Bestimmte Uhrzeit
+              {t.booking.waitlistExactTime}
             </button>
           </div>
 
           {mode === "exact" && (
             <label className={`block text-xs font-medium mb-4 ${isDark ? "text-white/70" : "text-gray-600"}`}>
-              Wunschzeit
+              {t.booking.waitlistPreferredTime}
               <select
                 value={preferredTime}
                 onChange={(event) => setPreferredTime(event.target.value)}
@@ -201,7 +203,7 @@ export function WaitlistPanel({
               onChange={(event) => setAllowOtherEmployees(event.target.checked)}
               className="mt-1"
             />
-            Auch bei anderen passenden Mitarbeitern benachrichtigen
+            {t.booking.waitlistOtherEmployees}
           </label>
 
           {error && (
@@ -212,10 +214,10 @@ export function WaitlistPanel({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             {([
-              ["firstName", "Vorname *", "text"],
-              ["lastName", "Nachname *", "text"],
-              ["email", "E-Mail *", "email"],
-              ["phone", "Telefon", "tel"],
+              ["firstName", `${t.booking.firstName} *`, "text"],
+              ["lastName", `${t.booking.lastName} *`, "text"],
+              ["email", `${t.booking.email} *`, "email"],
+              ["phone", t.booking.phone, "tel"],
             ] as const).map(([key, label, type]) => (
               <label key={key} className={`text-xs font-medium ${isDark ? "text-white/70" : "text-gray-600"}`}>
                 {label}
@@ -234,7 +236,7 @@ export function WaitlistPanel({
           </div>
 
           <label className={`block text-xs font-medium mb-5 ${isDark ? "text-white/70" : "text-gray-600"}`}>
-            Anmerkungen (optional)
+            {t.booking.notesOptional}
             <textarea
               rows={2}
               value={form.notes}
@@ -254,7 +256,7 @@ export function WaitlistPanel({
             className="w-full py-3 px-6 font-semibold text-sm text-white disabled:opacity-60"
             style={{ backgroundColor: primaryColor, borderRadius }}
           >
-            {submitting ? "Wird eingetragen…" : "Auf Warteliste setzen"}
+            {submitting ? t.booking.waitlistSubmitting : t.booking.waitlistSubmit}
           </button>
         </>
       )}

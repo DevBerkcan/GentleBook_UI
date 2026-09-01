@@ -29,6 +29,7 @@ export const translations = {
       noSearchResults: "Keine Behandlungen gefunden für",
       loadingServices: "Behandlungen werden geladen...",
       noServicesInCategory: "Keine Behandlungen in dieser Kategorie",
+      allServices: "Alle Services",
       selectedTreatment: "Ausgewählte Behandlung",
       minutes: "Min",
       // Step 2 - Employee
@@ -89,6 +90,29 @@ export const translations = {
       bookingSystemNotFound: "Buchungssystem nicht gefunden",
       bookingSystemNotFoundDesc: "Der Link",
       bookingSystemNotFoundDesc2: "ist nicht gültig.",
+      unavailableTitle: "Derzeit nicht verfügbar",
+      unavailableDesc: "Über diese Seite können momentan keine Termine gebucht werden. Bitte wenden Sie sich direkt an das Unternehmen.",
+      locationStep: "Standort",
+      chooseLocation: "Standort wählen",
+      stepOf: "Schritt {current} von {total}",
+      finderTitle: "Neu: Automatisierter Service-Finder",
+      finderDesc: "Lassen Sie sich zuerst passende Services empfehlen und buchen Sie danach direkt.",
+      finderStart: "Finder starten",
+      waitlistOpen: "Keine passende Uhrzeit? Zur Warteliste",
+      waitlistFirstLastRequired: "Vor- und Nachname sind erforderlich.",
+      waitlistPreferredTimeRequired: "Bitte wählen Sie eine Wunschzeit.",
+      waitlistError: "Fehler beim Eintragen in die Warteliste.",
+      waitlistSuccessTitle: "Sie stehen auf der Warteliste!",
+      waitlistSuccessDesc: "Wird ein passender Termin frei, reservieren wir ihn 15 Minuten für Sie und senden Ihnen einen persönlichen Link.",
+      waitlistFor: "Warteliste für",
+      waitlistAt: "bei",
+      waitlistAnyTime: "Beliebige Uhrzeit",
+      waitlistExactTime: "Bestimmte Uhrzeit",
+      waitlistPreferredTime: "Wunschzeit",
+      waitlistOtherEmployees: "Auch bei anderen passenden Mitarbeitern benachrichtigen",
+      notesOptional: "Anmerkungen (optional)",
+      waitlistSubmitting: "Wird eingetragen…",
+      waitlistSubmit: "Auf Warteliste setzen",
     },
 
     // Admin
@@ -201,6 +225,7 @@ export const translations = {
       noSearchResults: "No treatments found for",
       loadingServices: "Loading treatments...",
       noServicesInCategory: "No treatments in this category",
+      allServices: "All services",
       selectedTreatment: "Selected treatment",
       minutes: "min",
       // Step 2 - Employee
@@ -261,6 +286,29 @@ export const translations = {
       bookingSystemNotFound: "Booking system not found",
       bookingSystemNotFoundDesc: "The link",
       bookingSystemNotFoundDesc2: "is not valid.",
+      unavailableTitle: "Currently unavailable",
+      unavailableDesc: "Appointments cannot currently be booked through this page. Please contact the business directly.",
+      locationStep: "Location",
+      chooseLocation: "Choose a location",
+      stepOf: "Step {current} of {total}",
+      finderTitle: "New: Automated service finder",
+      finderDesc: "Get suitable service recommendations first, then book directly.",
+      finderStart: "Start finder",
+      waitlistOpen: "No suitable time? Join the waitlist",
+      waitlistFirstLastRequired: "First and last name are required.",
+      waitlistPreferredTimeRequired: "Please select a preferred time.",
+      waitlistError: "Could not join the waitlist.",
+      waitlistSuccessTitle: "You're on the waitlist!",
+      waitlistSuccessDesc: "When a suitable appointment becomes available, we will reserve it for you for 15 minutes and send you a personal link.",
+      waitlistFor: "Waitlist for",
+      waitlistAt: "with",
+      waitlistAnyTime: "Any time",
+      waitlistExactTime: "Specific time",
+      waitlistPreferredTime: "Preferred time",
+      waitlistOtherEmployees: "Notify me about other suitable staff members too",
+      notesOptional: "Notes (optional)",
+      waitlistSubmitting: "Joining…",
+      waitlistSubmit: "Join waitlist",
     },
 
     // Admin
@@ -355,6 +403,7 @@ export type Translations = {
     noServicesTitle: string; noServicesDesc: string; backToProfile: string;
     searchPlaceholder: string; servicesFound_one: string; servicesFound_other: string;
     noSearchResults: string; loadingServices: string; noServicesInCategory: string;
+    allServices: string;
     selectedTreatment: string; minutes: string;
     chooseEmployee: string; step2of4: string; for: string;
     noEmployeesAvailable: string; chooseOtherService: string; backToServices: string;
@@ -377,6 +426,16 @@ export type Translations = {
     errorFillRequired: string; errorPrivacy: string;
     errorFillAllRequired: string; errorInvalidEmail: string; errorBooking: string;
     bookingSystemNotFound: string; bookingSystemNotFoundDesc: string; bookingSystemNotFoundDesc2: string;
+    unavailableTitle: string; unavailableDesc: string;
+    locationStep: string; chooseLocation: string; stepOf: string;
+    finderTitle: string; finderDesc: string; finderStart: string;
+    waitlistOpen: string; waitlistFirstLastRequired: string;
+    waitlistPreferredTimeRequired: string; waitlistError: string;
+    waitlistSuccessTitle: string; waitlistSuccessDesc: string;
+    waitlistFor: string; waitlistAt: string; waitlistAnyTime: string;
+    waitlistExactTime: string; waitlistPreferredTime: string;
+    waitlistOtherEmployees: string; notesOptional: string;
+    waitlistSubmitting: string; waitlistSubmit: string;
   };
   admin: {
     dashboard: string; calendar: string; bookings: string; customers: string;

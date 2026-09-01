@@ -56,7 +56,7 @@ export function ServiceSelector({ services: fallbackServices, selectedService, o
       } catch {
         const defaultCategory: ServiceCategory = {
           id: "default",
-          name: "Alle Services",
+          name: "",
           description: null,
           displayOrder: 0,
           isActive: true,
@@ -305,7 +305,9 @@ export function ServiceSelector({ services: fallbackServices, selectedService, o
                     style={{ backgroundColor: isExpanded ? `${primaryColor}22` : lightBg }}
                   >
                     <div className="text-left flex-1 min-w-0 pr-2">
-                      <h3 className="font-bold text-[#14162B] text-sm sm:text-base truncate">{category.name}</h3>
+                      <h3 className="font-bold text-[#14162B] text-sm sm:text-base truncate">
+                        {category.id === "default" ? t.booking.allServices : category.name}
+                      </h3>
                       {category.description && (
                         <p className="text-xs sm:text-sm text-[#8A8A8A] truncate">{category.description}</p>
                       )}

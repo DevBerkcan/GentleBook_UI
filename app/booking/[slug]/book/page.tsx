@@ -254,8 +254,9 @@ function BookingPageInner() {
       }, slug);
       BookingEvents.bookingCompleted(booking.bookingNumber, selectedService.name, selectedService.price, {}, selectedService.currency);
       router.push(`/booking/confirmation/${booking.id}?slug=${slug}`);
-    } catch (err: any) {
-      setError(err.message || t.booking.errorBooking);
+    } catch (err: unknown) {
+      const responseMessage = err instanceof Error ? err.message : undefined;
+      setError(lang === "de" ? (responseMessage || t.booking.errorBooking) : t.booking.errorBooking);
     } finally {
       setSubmitting(false);
     }
@@ -279,8 +280,8 @@ function BookingPageInner() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-md text-center p-8">
-          <p className="text-2xl font-bold text-gray-800 mb-2">Derzeit nicht verfügbar</p>
-          <p className="text-gray-500">Über diese Seite können momentan keine Termine gebucht werden. Bitte wenden Sie sich direkt an das Unternehmen.</p>
+          <p className="text-2xl font-bold text-gray-800 mb-2">{t.booking.unavailableTitle}</p>
+          <p className="text-gray-500">{t.booking.unavailableDesc}</p>
         </div>
       </div>
     );
@@ -346,15 +347,15 @@ function BookingPageInner() {
         {finderEnabled && (
           <div className={`mb-5 rounded-xl border p-3 flex items-center justify-between gap-3 ${isDark ? 'border-white/15 bg-white/5' : 'border-[#DAD7F8] bg-[#F4F2FF]'}`}>
             <div>
-              <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-[#2D2568]'}`}>Neu: Automatisierter Service-Finder</p>
-              <p className={`text-xs ${isDark ? 'text-white/70' : 'text-[#5E55A3]'}`}>Lass dir zuerst passende Services empfehlen und buche danach direkt.</p>
+              <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-[#2D2568]'}`}>{t.booking.finderTitle}</p>
+              <p className={`text-xs ${isDark ? 'text-white/70' : 'text-[#5E55A3]'}`}>{t.booking.finderDesc}</p>
             </div>
             <button
               onClick={() => router.push(`/booking/${slug}/finder`)}
               className="rounded-lg px-3 py-2 text-xs font-bold text-white"
               style={{ backgroundColor: primaryColor }}
             >
-              Finder starten
+              {t.booking.finderStart}
             </button>
           </div>
         )}
@@ -362,7 +363,7 @@ function BookingPageInner() {
         {/* Step indicators */}
         {(() => {
           const stepLabels = hasMultipleLocations
-            ? [lang === 'de' ? 'Standort' : 'Location', ...t.booking.stepLabels]
+            ? [t.booking.locationStep, ...t.booking.stepLabels]
             : t.booking.stepLabels;
           return (
             <div className="mb-8 flex justify-center items-start gap-2 sm:gap-3">
@@ -441,8 +442,8 @@ function BookingPageInner() {
                   onSelect={handleLocationSelect}
                   onNext={next}
                   primaryColor={primaryColor}
-                  title={lang === 'de' ? 'Standort wählen' : 'Choose a location'}
-                  subtitle={lang === 'de' ? `Schritt 1 von ${TOTAL_STEPS}` : `Step 1 of ${TOTAL_STEPS}`}
+                  title={t.booking.chooseLocation}
+                  subtitle={t.booking.stepOf.replace('{current}', '1').replace('{total}', String(TOTAL_STEPS))}
                 />
               </motion.div>
             )}
