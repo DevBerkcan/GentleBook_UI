@@ -7,7 +7,7 @@ export const siteConfig = {
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://app.gentlebook.app",
 };
 
-const legalSiteUrl = (process.env.NEXT_PUBLIC_LEGAL_SITE_URL || "https://gentlebook.app").replace(/\/$/, "");
+const legalSiteUrl = (process.env.NEXT_PUBLIC_LEGAL_SITE_URL || "https://gentlebook-website.vercel.app").replace(/\/$/, "");
 
 export const legalConfig = {
   baseUrl: legalSiteUrl,
