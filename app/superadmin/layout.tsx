@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { LayoutDashboard, Building2, LogOut, Mail, Activity, Bell, FileText, Euro, AlertTriangle, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Building2, LogOut, Mail, Activity, Bell, FileText, Euro, AlertTriangle, ScrollText, TrendingUp } from 'lucide-react';
 import { superAdminApi } from '@/lib/api/superadmin';
 import { getSuperAdminToken, getSuperAdminUser, removeSuperAdminToken, removeSuperAdminUser } from '@/lib/auth/storage';
 import { GentleBookMark } from '@/components/admin/GentleBookLogo';
@@ -65,6 +65,7 @@ function SuperAdminNav({ logout }: { logout: () => void }) {
 
   const navItems = [
     { href: '/superadmin/dashboard',  label: 'Dashboard',       icon: LayoutDashboard },
+    { href: '/superadmin/revenue',    label: 'Umsatz',          icon: TrendingUp },
     { href: '/superadmin/tenants',    label: 'Buchungssysteme', icon: Building2 },
     { href: '/superadmin/requests',   label: 'Abo-Anfragen',    icon: Bell, badge: pendingRequests },
     { href: '/superadmin/invoices',   label: 'Rechnungen',      icon: FileText },

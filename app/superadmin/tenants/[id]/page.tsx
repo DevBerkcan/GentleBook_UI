@@ -7,10 +7,11 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Save, Clock, ExternalLink, Copy, Check,
   Palette, Users, Link2, CreditCard, Mail, Phone, Globe, MapPin, Upload, ImageIcon, LogIn, Trash2,
+  RefreshCw, ShieldCheck, ShieldAlert, Download, FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRef } from 'react';
-import { superAdminApi, UpdateTenantSettingsPayload, TenantStats } from '@/lib/api/superadmin';
+import { superAdminApi, UpdateTenantSettingsPayload, TenantStats, TenantBillingStatus, InvoiceItem } from '@/lib/api/superadmin';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { resolveLogoUrl } from '@/lib/utils/logo';
 import { setAccessToken } from '@/lib/auth/storage';
@@ -43,6 +44,10 @@ export default function TenantDetailPage() {
 
   const [tenantStats, setTenantStats] = useState<TenantStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [billing, setBilling] = useState<TenantBillingStatus | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [tenantInvoices, setTenantInvoices] = useState<InvoiceItem[] | null>(null);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [domainInfo, setDomainInfo] = useState<{ domain: string | null; status: string; requestedAt: string | null } | null>(null);
   const [domainLoading, setDomainLoading] = useState(false);
   const [domainUpdating, setDomainUpdating] = useState(false);
@@ -290,6 +295,26 @@ export default function TenantDetailPage() {
     setStatsLoading(false);
   }
 
+  async function loadBilling(force = false) {
+    if (billing && !force) return;
+    setBillingLoading(true);
+    try {
+      const data = await superAdminApi.getTenantBilling(id);
+      setBilling(data);
+    } catch { /* silent fail */ }
+    setBillingLoading(false);
+  }
+
+  async function loadInvoices() {
+    if (tenantInvoices) return;
+    setInvoicesLoading(true);
+    try {
+      const data = await superAdminApi.getInvoices({ tenantId: id, page: 1, pageSize: 50 });
+      setTenantInvoices(data.items);
+    } catch { /* silent fail */ }
+    setInvoicesLoading(false);
+  }
+
   async function loadDomain() {
     if (domainInfo) return;
     setDomainLoading(true);
@@ -353,7 +378,7 @@ export default function TenantDetailPage() {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => { setActiveTab(tab.key); if (tab.key === 'stats' || tab.key === 'subscription') loadStats(); if (tab.key === 'domain') loadDomain(); }}
+            onClick={() => { setActiveTab(tab.key); if (tab.key === 'stats' || tab.key === 'subscription') loadStats(); if (tab.key === 'subscription') { loadBilling(); loadInvoices(); } if (tab.key === 'domain') loadDomain(); }}
             className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.key
                 ? 'bg-white text-gray-900 shadow-sm'
@@ -797,6 +822,108 @@ export default function TenantDetailPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Live-Status von Mollie */}
+                {(sub.mollieCustomerId || sub.mollieSubscriptionId) && (
+                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-900">Live-Status von Mollie</p>
+                      <button
+                        type="button"
+                        onClick={() => loadBilling(true)}
+                        disabled={billingLoading}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 disabled:opacity-50"
+                      >
+                        <RefreshCw size={12} className={billingLoading ? 'animate-spin' : ''} />
+                        Aktualisieren
+                      </button>
+                    </div>
+
+                    {billingLoading && !billing ? (
+                      <div className="animate-pulse h-16 bg-gray-100 rounded-lg" />
+                    ) : billing && !billing.available ? (
+                      <p className="text-xs text-red-600">{billing.error ?? 'Live-Abfrage bei Mollie derzeit nicht möglich.'}</p>
+                    ) : billing ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+                          <div>
+                            <p className="text-gray-400">SEPA-Mandat (live)</p>
+                            <p className={`flex items-center gap-1 font-medium ${
+                              billing.mandateStatus === 'valid' ? 'text-green-700' : billing.mandateStatus === 'pending' ? 'text-amber-700' : 'text-red-700'
+                            }`}>
+                              {billing.mandateStatus === 'valid' ? <ShieldCheck size={13} /> : <ShieldAlert size={13} />}
+                              {billing.mandateStatus ?? '–'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Kontoinhaber</p>
+                            <p className="text-gray-700">{billing.consumerName ?? '–'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">IBAN</p>
+                            <p className="font-mono text-gray-700">{billing.consumerAccountMasked ?? '–'}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">Nächste Abbuchung (live)</p>
+                            <p className="text-gray-700 font-medium">
+                              {billing.nextPaymentDate ? new Date(billing.nextPaymentDate).toLocaleDateString('de-DE') : '–'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {billing.recentPayments.length > 0 && (
+                          <div className="pt-2 border-t border-gray-200">
+                            <p className="text-xs text-gray-400 mb-1.5">Letzte Mollie-Zahlungen</p>
+                            <div className="space-y-1">
+                              {billing.recentPayments.map(p => (
+                                <div key={p.id} className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600 truncate mr-2">{p.description ?? p.id}</span>
+                                  <span className="flex items-center gap-2 shrink-0">
+                                    <span className={`px-1.5 py-0.5 rounded-full font-medium ${
+                                      p.status === 'paid' ? 'bg-green-50 text-green-700' :
+                                      p.status === 'failed' || p.status === 'canceled' || p.status === 'expired' ? 'bg-red-50 text-red-700' :
+                                      'bg-amber-50 text-amber-700'
+                                    }`}>{p.status}</span>
+                                    <span className="text-gray-500">{p.amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })} {p.currency}</span>
+                                    <span className="text-gray-400 w-20 text-right">{new Date(p.createdAt).toLocaleDateString('de-DE')}</span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* Rechnungen */}
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                  <p className="text-sm font-semibold text-gray-900">Rechnungen</p>
+                  {invoicesLoading && !tenantInvoices ? (
+                    <div className="animate-pulse h-16 bg-gray-100 rounded-lg" />
+                  ) : tenantInvoices && tenantInvoices.length > 0 ? (
+                    <div className="space-y-1">
+                      {tenantInvoices.map(inv => (
+                        <div key={inv.id} className="flex items-center justify-between text-xs py-1 border-b border-gray-100 last:border-0">
+                          <span className="flex items-center gap-1.5 text-gray-700">
+                            <FileText size={12} className="text-gray-400" />
+                            {inv.invoiceNumber} · {inv.planName}
+                          </span>
+                          <span className="flex items-center gap-3 text-gray-500">
+                            <span>{new Date(inv.issueDate).toLocaleDateString('de-DE')}</span>
+                            <span className="font-medium text-gray-700">{inv.amount.toLocaleString('de-DE', { minimumFractionDigits: 2 })} {inv.currency}</span>
+                            <a href={superAdminApi.invoicePdfUrl(inv.id)} target="_blank" rel="noopener noreferrer" className="text-[#6355E4] hover:underline flex items-center gap-0.5">
+                              <Download size={11} /> PDF
+                            </a>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">Noch keine Rechnungen für diesen Kunden.</p>
+                  )}
+                </div>
 
                 {/* Revenue Overview */}
                 {tenantStats && (

@@ -186,6 +186,11 @@ export default function SuperAdminDashboard() {
                   {label}
                   <HelpTip text={help} />
                 </p>
+                {label === 'MRR' && (
+                  <Link href="/superadmin/revenue" className="text-[11px] text-blue-500 hover:underline mt-1 inline-flex items-center gap-1">
+                    Tatsächlicher Umsatz →
+                  </Link>
+                )}
               </div>
             </GlowingEffect>
           ))}

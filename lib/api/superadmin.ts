@@ -21,6 +21,8 @@ export interface TenantListItem {
     trialDaysRemaining: number;
     isInTrial: boolean;
     isAccessAllowed: boolean;
+    currentPeriodEnd?: string | null;
+    pastDueSince?: string | null;
   };
 }
 
@@ -141,6 +143,12 @@ export const superAdminApi = {
     return data as { sent: boolean; sentTo: string };
   },
 
+  // ── Revenue (realized, from Mollie-collected invoices) + churn/conversion ──
+  async getRevenue(granularity: 'week' | 'month' = 'month', periods = 12) {
+    const { data } = await api.get('/superadmin/revenue', { params: { granularity, periods } });
+    return data as { granularity: 'week' | 'month'; periods: number; buckets: RevenueBucket[] };
+  },
+
   // ── Stats ────────────────────────────────────────────────────
   async getStats() {
     const { data } = await api.get('/superadmin/stats');
@@ -173,6 +181,12 @@ export const superAdminApi = {
   async getTenantStats(id: string) {
     const { data } = await api.get(`/superadmin/tenants/${id}/stats`);
     return data as TenantStats;
+  },
+
+  // ── Tenant Billing (live Mollie status) ───────────────────────
+  async getTenantBilling(id: string) {
+    const { data } = await api.get(`/superadmin/tenants/${id}/billing`);
+    return data as TenantBillingStatus;
   },
 
   // ── Eigene Domain ────────────────────────────────────────────
@@ -372,6 +386,40 @@ export interface PlanPriceItem {
   annualPrice: number;
   maxEmployees: number;
   maxServices: number;
+}
+
+export interface RevenueBucket {
+  periodStart: string;
+  periodEnd: string;
+  label: string;
+  realizedRevenue: number;
+  invoiceCount: number;
+  churnedTenants: number;
+  activeTenantsAtStart: number;
+  churnRatePercent: number | null;
+  trialsEnded: number;
+  converted: number;
+  conversionRatePercent: number | null;
+}
+
+export interface MollieRecentPayment {
+  id: string;
+  status: string; // open, pending, paid, failed, canceled, expired
+  amount: number;
+  currency: string;
+  description?: string;
+  createdAt: string;
+}
+
+export interface TenantBillingStatus {
+  available: boolean;
+  error?: string | null;
+  subscriptionStatus?: string | null;
+  nextPaymentDate?: string | null;
+  mandateStatus?: string | null;
+  consumerName?: string | null;
+  consumerAccountMasked?: string | null;
+  recentPayments: MollieRecentPayment[];
 }
 
 export interface InvoiceItem {

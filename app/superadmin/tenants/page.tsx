@@ -620,6 +620,7 @@ export default function TenantsPage() {
                 <th className="px-4 py-3 text-center hidden md:table-cell">Mitarb.</th>
                 <th className="px-4 py-3 text-center hidden md:table-cell">Buchungen</th>
                 <th className="px-4 py-3 text-left">Subscription</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Nächste Abbuchung</th>
                 <th className="px-4 py-3 text-left hidden lg:table-cell">Plan</th>
                 <th className="px-4 py-3 text-center hidden lg:table-cell">Online</th>
                 <th className="px-4 py-3 text-right">Aktionen</th>
@@ -670,6 +671,17 @@ export default function TenantsPage() {
                   {/* Subscription / Trial */}
                   <td className="px-4 py-3">
                     <SubscriptionCell sub={t.subscription} />
+                  </td>
+
+                  {/* Nächste Abbuchung */}
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    {t.subscription?.currentPeriodEnd ? (
+                      <span className={`text-xs ${t.subscription.pastDueSince ? 'text-orange-600 font-semibold' : 'text-gray-600'}`}>
+                        {new Date(t.subscription.currentPeriodEnd).toLocaleDateString('de-DE')}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-300">–</span>
+                    )}
                   </td>
 
                   {/* Plan Schnell-Wechsel */}
