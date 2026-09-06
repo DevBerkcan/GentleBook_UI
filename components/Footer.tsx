@@ -43,6 +43,9 @@ export const Footer = () => {
         </a>
         <span className="text-[#ECEBF2]">•</span>
         <KlaroCookieSettingsButton />
+        <a href={legalConfig.processing} className="hover:underline">AV-Vertrag</a>
+        <a href={legalConfig.subprocessors} className="hover:underline">Unterauftragsverarbeiter</a>
+        <a href={legalConfig.acceptableUse} className="hover:underline">Nutzungsrichtlinien</a>
       </div>
 
       <p className="text-xs text-[#8A8A8A]">

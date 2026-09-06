@@ -36,10 +36,29 @@ export const adminApi = {
         id: string;
         requestedPlan: string;
         status: string;
+        interval?: 'Monthly' | 'Yearly';
+        offeredMonthlyPrice?: number;
+        offeredAnnualPrice?: number;
+        offeredAt?: string;
+        offerExpiresAt?: string;
+        acceptedInterval?: 'Monthly' | 'Yearly';
+        acceptedPrice?: number;
+        acceptedAt?: string;
         createdAt: string;
         processedAt?: string;
       } | null;
     };
+  },
+
+  async acceptAgencyOffer(id: string, interval: 'Monthly' | 'Yearly') {
+    const { data } = await api.post(`/tenant/subscription-request/${id}/accept`, {
+      interval,
+      businessConfirmed: true,
+      termsAccepted: true,
+      billingTermsAccepted: true,
+      priceAccepted: true,
+    });
+    return data as { checkoutUrl: string | null; activated: boolean };
   },
 
   async startMollieMandateFlow(plan: string, interval: 'Monthly' | 'Yearly' = 'Monthly') {

@@ -9,6 +9,7 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
 import { TrackingProvider } from "@/components/analytics/TrackingProvider";
 import { siteConfig } from "@/lib/config";
+import { LegalNavigation } from "@/components/LegalNavigation";
 import "./globals.css";
 
 const jakartaSans = Plus_Jakarta_Sans({
@@ -62,6 +63,7 @@ export default function RootLayout({
             <TrackingProvider>
               <KlaroCookieConsent />
               {children}
+              <LegalNavigation />
             </TrackingProvider>
           </Suspense>
         </NextUIProvider>

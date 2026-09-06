@@ -37,6 +37,16 @@ interface Usage {
   services: { current: number; limit: number; isUnlimited: boolean; percentage: number };
 }
 
+interface AgencyOffer {
+  id: string;
+  requestedPlan: string;
+  status: string;
+  offeredMonthlyPrice: number;
+  offeredAnnualPrice: number;
+  offerExpiresAt: string;
+  acceptedInterval?: 'Monthly' | 'Yearly';
+}
+
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; icon: any }> = {
   Trial:     { label: 'Testphase',      bg: 'bg-amber-50',  text: 'text-amber-700',  icon: Clock },
   Active:    { label: 'Aktiv',          bg: 'bg-green-50',  text: 'text-green-700',  icon: CheckCircle },
@@ -143,6 +153,8 @@ export default function AdminSubscriptionPage() {
   const [requestedPlan, setRequestedPlan] = useState<string | null>(null);
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [requestError, setRequestError] = useState('');
+  const [agencyOffer, setAgencyOffer] = useState<AgencyOffer | null>(null);
+  const [acceptingOffer, setAcceptingOffer] = useState(false);
   const [mollieLoadingPlan, setMollieLoadingPlan] = useState<string | null>(null);
   const [mollieProcessing, setMollieProcessing] = useState(false);
   // null while unknown — deliberately don't show the SEPA button until we know for sure,
@@ -152,6 +164,7 @@ export default function AdminSubscriptionPage() {
   const [businessConfirmed, setBusinessConfirmed] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [billingConfirmed, setBillingConfirmed] = useState(false);
+  const [sepaAuthorized, setSepaAuthorized] = useState(false);
   const { confirm, dialog } = useConfirm();
   // Live prices from the backend (SuperAdmin-editable) — overrides the hardcoded PLANS
   // defaults below so this page never shows a stale price after a SuperAdmin price change.
@@ -206,8 +219,14 @@ export default function AdminSubscriptionPage() {
     ]).then(([subData, usageData, requestStatus, mollieStatus, pricing]) => {
       setSub(subData);
       setUsage(usageData);
-      if (requestStatus?.request?.status === 'Pending') {
+      if (requestStatus?.request && ['Pending', 'Offered', 'Accepted'].includes(requestStatus.request.status)) {
         setRequestedPlan(requestStatus.request.requestedPlan);
+      }
+      if (requestStatus?.request?.requestedPlan === 'Agency' &&
+          ['Offered', 'Accepted'].includes(requestStatus.request.status) &&
+          requestStatus.request.offeredMonthlyPrice && requestStatus.request.offeredAnnualPrice && requestStatus.request.offerExpiresAt) {
+        setAgencyOffer(requestStatus.request as AgencyOffer);
+        setBillingInterval(requestStatus.request.acceptedInterval ?? 'Monthly');
       }
       setMollieLiveMode(mollieStatus?.isLiveMode ?? false);
       setHasMollieSubscription(mollieStatus?.hasMollieSubscription ?? false);
@@ -305,6 +324,35 @@ export default function AdminSubscriptionPage() {
     }
   };
 
+  const handleAcceptAgencyOffer = async () => {
+    if (!agencyOffer || acceptingOffer) return;
+    if (!contractConfirmed) {
+      setRequestError('Bitte bestätigen Sie Preis, AGB, Unternehmereigenschaft und Abrechnungsbedingungen.');
+      return;
+    }
+    setAcceptingOffer(true);
+    setRequestError('');
+    try {
+      const result = await adminApi.acceptAgencyOffer(agencyOffer.id, billingInterval);
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+        return;
+      }
+      if (result.activated) {
+        const subData = await api.get('/tenant/subscription').then(r => r.data?.data ?? r.data);
+        setSub(subData);
+        setHasMollieSubscription(true);
+        setAgencyOffer(null);
+        setRequestedPlan(null);
+        setPlanChangeSuccess('Agency');
+      }
+    } catch (err: any) {
+      setRequestError(err.response?.data?.message || 'Das Agency-Angebot konnte nicht angenommen werden.');
+    } finally {
+      setAcceptingOffer(false);
+    }
+  };
+
   const handleCancel = async () => {
     if (cancelling) return;
     const periodEndText = sub?.currentPeriodEnd
@@ -361,7 +409,7 @@ export default function AdminSubscriptionPage() {
       return monthlyTotal > 0 ? Math.round((1 - annual / monthlyTotal) * 100) : 0;
     })
   );
-  const contractConfirmed = businessConfirmed && termsAccepted && billingConfirmed;
+  const contractConfirmed = businessConfirmed && termsAccepted && billingConfirmed && sepaAuthorized;
 
   return (
     <motion.div
@@ -556,7 +604,7 @@ export default function AdminSubscriptionPage() {
           <div>
             <p className="font-semibold text-green-800">Anfrage erfolgreich gesendet!</p>
             <p className="text-green-700 text-sm mt-1">
-              Wir haben Ihre Anfrage für den <strong>{requestedPlan}-Plan</strong> erhalten und aktivieren ihn innerhalb von 24 Stunden. Sie erhalten eine Bestätigungs-E-Mail.
+              Wir haben Ihre Anfrage für den <strong>{requestedPlan}-Plan</strong> erhalten. Bei Agency senden wir Ihnen zunächst ein Angebot mit Monats- und Jahrespreis. Eine Aktivierung erfolgt erst nach Ihrer Auswahl und Zustimmung.
             </p>
           </div>
         </motion.div>
@@ -574,7 +622,7 @@ export default function AdminSubscriptionPage() {
       )}
 
       {/* Pending Request Banner */}
-      {requestedPlan && !requestSuccess && (
+      {requestedPlan && !requestSuccess && !agencyOffer && (
         <motion.div variants={fadeUp} className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex gap-4">
           <Clock className="text-amber-500 shrink-0 mt-0.5" size={22} />
           <div>
@@ -584,6 +632,53 @@ export default function AdminSubscriptionPage() {
             </p>
           </div>
         </motion.div>
+      )}
+
+      {agencyOffer && (
+        <motion.section variants={fadeUp} className="border border-[#6355E4]/30 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase text-[#6355E4]">Ihr persönliches Angebot</p>
+              <h2 className="mt-1 text-xl font-bold text-gray-900">GentleBook Agency</h2>
+              <p className="mt-1 text-sm text-gray-500">Gültig bis {new Date(agencyOffer.offerExpiresAt).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            </div>
+            <Shield className="text-[#6355E4]" size={24} />
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {(['Monthly', 'Yearly'] as const).map((interval) => {
+              const selected = billingInterval === interval;
+              const price = interval === 'Monthly' ? agencyOffer.offeredMonthlyPrice : agencyOffer.offeredAnnualPrice;
+              return (
+                <button key={interval} type="button" onClick={() => setBillingInterval(interval)} className={`border p-4 text-left transition-colors ${selected ? 'border-[#6355E4] bg-[#6355E4]/5 ring-1 ring-[#6355E4]' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <span className="flex items-center justify-between text-sm font-semibold text-gray-700">
+                    {interval === 'Monthly' ? 'Monatliche Abrechnung' : 'Jährliche Abrechnung'}
+                    <span className={`h-4 w-4 rounded-full border ${selected ? 'border-4 border-[#6355E4]' : 'border-gray-300'}`} />
+                  </span>
+                  <span className="mt-2 block text-2xl font-bold text-gray-900">{price.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €</span>
+                  <span className="text-xs text-gray-500">Gesamtpreis pro {interval === 'Monthly' ? 'Monat' : 'Jahr'}, im Voraus</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <fieldset className="mt-5 space-y-3 border-t border-gray-200 pt-5 text-sm text-gray-700">
+            <legend className="sr-only">Verbindliche Bestätigungen</legend>
+            <label className="flex items-start gap-3"><input type="checkbox" checked={businessConfirmed} onChange={(e) => setBusinessConfirmed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#6355E4]" /><span>Ich schließe das Abonnement als Unternehmer im Sinne des § 14 BGB ab.</span></label>
+            <label className="flex items-start gap-3"><input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#6355E4]" /><span>Ich akzeptiere die geltenden <a href={legalConfig.terms} target="_blank" rel="noopener noreferrer" className="text-[#6355E4] underline">GentleBook-AGB</a>.</span></label>
+            <label className="flex items-start gap-3"><input type="checkbox" checked={billingConfirmed} onChange={(e) => setBillingConfirmed(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#6355E4]" /><span>Ich bestelle Agency verbindlich für {billingInterval === 'Monthly' ? `${agencyOffer.offeredMonthlyPrice.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € pro Monat` : `${agencyOffer.offeredAnnualPrice.toLocaleString('de-DE', { minimumFractionDigits: 2 })} € pro Jahr`}. {hasMollieSubscription ? `Der neue Preis gilt ab der nächsten regulären Abbuchung${sub?.currentPeriodEnd ? ` am ${new Date(sub.currentPeriodEnd).toLocaleDateString('de-DE')}` : ''}.` : 'Die erste Zahlung erfolgt unmittelbar; ich stimme der entsprechend verkürzten Vorabankündigung dieser ersten Abbuchung zu.'} Folgezahlungen erfolgen jeweils zu Beginn der nächsten Periode. Das Abonnement verlängert sich bis zur Kündigung jeweils um denselben Zeitraum.</span></label>
+            <label className="flex items-start gap-3"><input type="checkbox" checked={sepaAuthorized} onChange={(e) => setSepaAuthorized(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#6355E4]" /><span>Ich ermächtige GentleBook, die fälligen Beträge per SEPA-Lastschrift von dem auf der folgenden Mollie-Zahlungsseite anzugebenden Konto einzuziehen, und weise mein Kreditinstitut an, diese Lastschriften einzulösen. <em className="text-gray-500">(Entwurf – vor Go-Live anwaltlich zu prüfen.)</em></span></label>
+          </fieldset>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-gray-500">Ihre Auswahl, der Preis, der Zeitpunkt und die AGB-Version werden als Vertragsnachweis gespeichert.</p>
+            <button type="button" onClick={handleAcceptAgencyOffer} disabled={!contractConfirmed || acceptingOffer || (!hasMollieSubscription && mollieLiveMode !== true)} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 bg-[#6355E4] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#5646D6] disabled:cursor-not-allowed disabled:opacity-50">
+              {acceptingOffer ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <ArrowRight size={16} />}
+              {hasMollieSubscription ? 'Zahlungspflichtig Agency abonnieren' : 'Zahlungspflichtig abonnieren und zu Mollie'}
+            </button>
+          </div>
+          {!hasMollieSubscription && mollieLiveMode === false && <p className="mt-3 text-sm text-amber-700">Die Online-Zahlung ist derzeit nicht verfügbar. Bitte kontaktieren Sie den Support.</p>}
+        </motion.section>
       )}
 
       {/* Request Error Banner */}
@@ -648,6 +743,10 @@ export default function AdminSubscriptionPage() {
             <label className="flex items-start gap-3">
               <input type="checkbox" checked={billingConfirmed} onChange={(event) => setBillingConfirmed(event.target.checked)} className="mt-0.5 h-4 w-4 accent-[#6355E4]" />
               <span>Mir ist bekannt, dass das Abonnement {billingInterval === 'Yearly' ? 'jährlich' : 'monatlich'} im Voraus abgerechnet wird und sich jeweils um einen gleich langen Zeitraum verlängert, bis es gekündigt wird.</span>
+            </label>
+            <label className="flex items-start gap-3">
+              <input type="checkbox" checked={sepaAuthorized} onChange={(event) => setSepaAuthorized(event.target.checked)} className="mt-0.5 h-4 w-4 accent-[#6355E4]" />
+              <span>Ich ermächtige GentleBook, die fälligen Beträge per SEPA-Lastschrift von dem auf der folgenden Mollie-Zahlungsseite anzugebenden Konto einzuziehen, und weise mein Kreditinstitut an, diese Lastschriften einzulösen. <em className="text-gray-500">(Entwurf – vor Go-Live anwaltlich zu prüfen.)</em></span>
             </label>
           </fieldset>
         )}

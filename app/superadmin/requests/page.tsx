@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, XCircle, Clock, Mail, ExternalLink,
-  RefreshCw, Filter, Inbox,
+  RefreshCw, Inbox, Send, Euro,
 } from 'lucide-react';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@nextui-org/modal';
+import { Button } from '@nextui-org/button';
 import { superAdminApi, type SubscriptionRequestItem } from '@/lib/api/superadmin';
 import Link from 'next/link';
 
@@ -23,6 +25,8 @@ const PLAN_PRICES: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, { label: string; color: string; icon: any }> = {
   Pending:   { label: 'Offen',       color: 'bg-amber-50 text-amber-700',  icon: Clock },
+  Offered:   { label: 'Angebot gesendet', color: 'bg-blue-50 text-blue-700', icon: Send },
+  Accepted:  { label: 'Zahlung läuft', color: 'bg-violet-50 text-violet-700', icon: Clock },
   Activated: { label: 'Aktiviert',   color: 'bg-green-50 text-green-700',  icon: CheckCircle },
   Declined:  { label: 'Abgelehnt',   color: 'bg-red-50 text-red-600',      icon: XCircle },
 };
@@ -30,6 +34,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; icon: any }>
 const TABS = [
   { key: undefined, label: 'Alle' },
   { key: 'Pending',   label: 'Offen' },
+  { key: 'Offered',   label: 'Angebote' },
   { key: 'Activated', label: 'Aktiviert' },
   { key: 'Declined',  label: 'Abgelehnt' },
 ];
@@ -40,6 +45,10 @@ export default function SubscriptionRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [offerItem, setOfferItem] = useState<SubscriptionRequestItem | null>(null);
+  const [monthlyPrice, setMonthlyPrice] = useState('');
+  const [annualPrice, setAnnualPrice] = useState('');
+  const [offerError, setOfferError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,26 +66,42 @@ export default function SubscriptionRequestsPage() {
   useEffect(() => { load(); }, [load]);
 
   const handleActivate = async (item: SubscriptionRequestItem) => {
-    // Agency has no fixed price ("Preis auf Anfrage") — the backend requires an individually
-    // negotiated amount at activation time, so ask for it here before confirming.
-    let negotiatedMonthlyPrice: number | undefined;
     if (item.requestedPlan === 'Agency') {
-      const raw = window.prompt(`Individuellen Monatspreis für ${item.tenantName} (Agency) festlegen (€, ohne Komma für Cent-Beträge nutze einen Punkt):`);
-      if (raw === null) return;
-      const parsed = Number(raw.replace(',', '.'));
-      if (!raw.trim() || Number.isNaN(parsed) || parsed <= 0) {
-        alert('Bitte einen gültigen Preis eingeben.');
-        return;
-      }
-      negotiatedMonthlyPrice = parsed;
+      setOfferItem(item);
+      setMonthlyPrice(item.offeredMonthlyPrice?.toString() ?? '');
+      setAnnualPrice(item.offeredAnnualPrice?.toString() ?? '');
+      setOfferError('');
+      return;
     }
-    if (!confirm(`Plan "${item.requestedPlan}" für ${item.tenantName} aktivieren?${negotiatedMonthlyPrice ? ` (${negotiatedMonthlyPrice}€/Monat)` : ''}`)) return;
+    if (!confirm(`Plan "${item.requestedPlan}" für ${item.tenantName} aktivieren?`)) return;
     setActionLoading(item.id);
     try {
-      await superAdminApi.activateSubscriptionRequest(item.id, { negotiatedMonthlyPrice });
+      await superAdminApi.activateSubscriptionRequest(item.id);
       await load();
     } catch (e: any) {
       alert(e.response?.data?.message ?? 'Fehler beim Aktivieren');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSendOffer = async () => {
+    if (!offerItem) return;
+    const parsePrice = (value: string) => Number(value.includes(',') ? value.replace(/\./g, '').replace(',', '.') : value);
+    const monthly = parsePrice(monthlyPrice);
+    const annual = parsePrice(annualPrice);
+    if (!Number.isFinite(monthly) || monthly <= 0 || !Number.isFinite(annual) || annual <= 0) {
+      setOfferError('Bitte einen gültigen Monats- und Jahrespreis eingeben.');
+      return;
+    }
+    setActionLoading(offerItem.id);
+    setOfferError('');
+    try {
+      await superAdminApi.sendAgencyOffer(offerItem.id, monthly, annual);
+      setOfferItem(null);
+      await load();
+    } catch (e: any) {
+      setOfferError(e.response?.data?.message ?? 'Angebot konnte nicht gesendet werden.');
     } finally {
       setActionLoading(null);
     }
@@ -104,7 +129,7 @@ export default function SubscriptionRequestsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Abo-Anfragen</h1>
           <p className="text-gray-500 mt-1 text-sm">
-            Kunden die einen Plan anfragen — hier aktivieren oder ablehnen
+            Agency-Angebote werden erst nach Kundenzustimmung und Mollie-Bestätigung aktiviert
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -209,6 +234,13 @@ export default function SubscriptionRequestsPage() {
                   {item.note && (
                     <p className="text-xs text-gray-500 mt-1 italic">"{item.note}"</p>
                   )}
+                  {item.offeredMonthlyPrice && item.offeredAnnualPrice && (
+                    <p className="text-xs text-blue-700 mt-2 font-medium">
+                      Angebot: {item.offeredMonthlyPrice.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €/Monat oder{' '}
+                      {item.offeredAnnualPrice.toLocaleString('de-DE', { minimumFractionDigits: 2 })} €/Jahr
+                      {item.offerExpiresAt && ` · gültig bis ${new Date(item.offerExpiresAt).toLocaleDateString('de-DE')}`}
+                    </p>
+                  )}
                 </div>
 
                 {/* Right: Actions */}
@@ -239,9 +271,18 @@ export default function SubscriptionRequestsPage() {
                         ) : (
                           <CheckCircle size={15} />
                         )}
-                        Aktivieren
+                        {item.requestedPlan === 'Agency' ? 'Angebot erstellen' : 'Aktivieren'}
                       </button>
                     </>
+                  )}
+                  {item.status === 'Offered' && item.requestedPlan === 'Agency' && (
+                    <button
+                      onClick={() => handleActivate(item)}
+                      disabled={isLoading}
+                      className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-700 border border-blue-200 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <Send size={15} /> Angebot ändern
+                    </button>
                   )}
                 </div>
               </motion.div>
@@ -249,6 +290,39 @@ export default function SubscriptionRequestsPage() {
           })}
         </div>
       )}
+
+      <Modal isOpen={!!offerItem} onClose={() => !actionLoading && setOfferItem(null)} size="lg" placement="center">
+        <ModalContent>
+          <>
+            <ModalHeader className="flex items-center gap-3 border-b border-gray-100">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700"><Euro size={18} /></span>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Agency-Angebot erstellen</h2>
+                <p className="text-xs font-normal text-gray-500">{offerItem?.tenantName}</p>
+              </div>
+            </ModalHeader>
+            <ModalBody className="py-5 space-y-4">
+              <p className="text-sm text-gray-600">Der Kunde erhält beide Preise per E-Mail und wählt anschließend selbst die Abrechnung. Das Angebot ist 14 Tage gültig.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1.5 text-sm font-medium text-gray-700">
+                  Monatspreis
+                  <div className="relative"><input value={monthlyPrice} onChange={(e) => setMonthlyPrice(e.target.value)} inputMode="decimal" placeholder="z. B. 149,00" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-9 outline-none focus:border-[#6355E4] focus:ring-2 focus:ring-[#6355E4]/10" /><span className="absolute right-3 top-2.5 text-gray-400">€</span></div>
+                </label>
+                <label className="space-y-1.5 text-sm font-medium text-gray-700">
+                  Jahrespreis (Gesamtbetrag)
+                  <div className="relative"><input value={annualPrice} onChange={(e) => setAnnualPrice(e.target.value)} inputMode="decimal" placeholder="z. B. 1.430,00" className="w-full rounded-lg border border-gray-300 px-3 py-2.5 pr-9 outline-none focus:border-[#6355E4] focus:ring-2 focus:ring-[#6355E4]/10" /><span className="absolute right-3 top-2.5 text-gray-400">€</span></div>
+                </label>
+              </div>
+              {offerError && <p className="text-sm text-red-600">{offerError}</p>}
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-relaxed text-blue-800">Das Senden aktiviert den Plan nicht. Agency wird erst nach dokumentierter Kundenzustimmung und erfolgreicher Mollie-Verarbeitung aktiv.</div>
+            </ModalBody>
+            <ModalFooter className="border-t border-gray-100">
+              <Button variant="flat" onPress={() => setOfferItem(null)} isDisabled={!!actionLoading}>Abbrechen</Button>
+              <Button className="bg-[#6355E4] text-white font-semibold" onPress={handleSendOffer} isLoading={!!actionLoading} startContent={!actionLoading && <Send size={15} />}>Angebot per E-Mail senden</Button>
+            </ModalFooter>
+          </>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

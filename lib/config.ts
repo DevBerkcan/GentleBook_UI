@@ -11,12 +11,19 @@ const legalSiteUrl = (process.env.NEXT_PUBLIC_LEGAL_SITE_URL || "https://gentleb
 
 export const legalConfig = {
   baseUrl: legalSiteUrl,
+  sepa: `${legalSiteUrl}/sepa`,
+  trial: `${legalSiteUrl}/testphase`,
+  cancellation: `${legalSiteUrl}/kuendigung`,
   imprint: `${legalSiteUrl}/impressum`,
   privacy: `${legalSiteUrl}/datenschutz`,
   terms: `${legalSiteUrl}/agb`,
   b2b: `${legalSiteUrl}/b2b`,
   processing: `${legalSiteUrl}/auftragsverarbeitung`,
   subprocessors: `${legalSiteUrl}/unterauftragsverarbeiter`,
+  cookies: `${legalSiteUrl}/cookies`,
+  acceptableUse: `${legalSiteUrl}/nutzungsrichtlinien`,
+  securityMeasures: `${legalSiteUrl}/tom`,
+  retention: `${legalSiteUrl}/loeschkonzept`,
 };
 
 // Zentraler Betreiber-Support-Kontakt — bitte NUR hier pflegen,

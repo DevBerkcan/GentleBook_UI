@@ -246,6 +246,13 @@ export const superAdminApi = {
     return data as { message: string };
   },
 
+  async sendAgencyOffer(id: string, monthlyPrice: number, annualPrice: number, validForDays = 14, note?: string) {
+    const { data } = await api.post(`/superadmin/subscription-requests/${id}/offer`, {
+      monthlyPrice, annualPrice, validForDays, note,
+    });
+    return data as { message: string };
+  },
+
   async declineSubscriptionRequest(id: string) {
     const { data } = await api.post(`/superadmin/subscription-requests/${id}/decline`);
     return data as { message: string };
@@ -308,6 +315,15 @@ export interface SubscriptionRequestItem {
   contactEmail: string;
   status: string;
   note?: string;
+  interval?: 'Monthly' | 'Yearly';
+  offeredMonthlyPrice?: number;
+  offeredAnnualPrice?: number;
+  offeredAt?: string;
+  offerExpiresAt?: string;
+  acceptedInterval?: 'Monthly' | 'Yearly';
+  acceptedPrice?: number;
+  acceptedAt?: string;
+  acceptedByEmail?: string;
   createdAt: string;
   processedAt?: string;
   tenantId: string;
